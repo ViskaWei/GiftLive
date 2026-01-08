@@ -1,0 +1,48 @@
+{
+  "experiment": "delay_modeling",
+  "experiment_id": "EXP-20260108-gift-allocation-05",
+  "mvp": "MVP-1.2",
+  "timestamp": "2026-01-08T15:44:04.154224",
+  "delay_stats": {
+    "n_samples": 77824,
+    "mean": 461.43971220960117,
+    "median": 0.0,
+    "std": 2079.2426660050082,
+    "p25": 0.0,
+    "p75": 0.0,
+    "p90": 1020.7288999999989,
+    "p95": 3003.099349999992,
+    "p99": 8616.58385,
+    "max": 134123.964,
+    "relative_delay_mean": 0.012025823890108351,
+    "relative_delay_p50": 0.0,
+    "pct_late_50": 0.6887335526315789,
+    "pct_late_80": 0.1773231907894737,
+    "pct_late_90": 0.07452713815789475
+  },
+  "weibull_params": {
+    "shape": 0.9395535547602001,
+    "scale": 3253.0727719808865
+  },
+  "train_size": 1872509,
+  "val_size": 1701600,
+  "test_size": 1335406,
+  "baseline": {
+    "pr_auc": 0.6513048647543527,
+    "roc_auc": 0.9904951584812285,
+    "ece": 0.017922485343984745,
+    "brier_score": 0.014736289846241854,
+    "log_loss": 0.05256964949553474
+  },
+  "chapelle": {
+    "pr_auc": 0.6920726162869736,
+    "roc_auc": 0.9906441636579922,
+    "ece": 0.02760005849175194,
+    "brier_score": 0.01522703755754182,
+    "log_loss": 0.05538491555885179
+  },
+  "ece_improvement": -0.009677573147767196,
+  "decision": "CLOSE DG2 - No delay correction needed (ECE improvement < 0.02)",
+  "decision_rule": "ECE improvement >= 0.02 -> adopt delay correction",
+  "conclusion": "DG2 CLOSED"
+}

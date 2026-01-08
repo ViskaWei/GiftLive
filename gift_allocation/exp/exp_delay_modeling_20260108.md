@@ -3,28 +3,33 @@
 > **Name:** Delayed Feedback Calibration  
 > **ID:** `EXP-20260108-gift-allocation-05`  
 > **Topic:** `gift_allocation` | **MVP:** MVP-1.2  
-> **Author:** Viska Wei | **Date:** 2026-01-08 | **Status:** ⏳
+> **Author:** Viska Wei | **Date:** 2026-01-08 | **Status:** ✅
 
-> 🎯 **Target:** 验证延迟反馈建模（生存分析/Chapelle方法）是否能改善打赏预测的校准性能  
-> 🚀 **Next:** If ECE改善≥0.02 → 确认延迟建模路线；Else → 简单窗口截断
+> 🎯 **Target:** 验证延迟反馈建模（Chapelle方法）是否能改善打赏预测的校准性能  
+> 🚀 **Next:** 延迟不是问题，关闭 DG2 → 考虑 MVP-0.3 Simulator 或 特征工程优化
 
 ## ⚡ 核心结论速览
 
-> **一句话**: TODO - 待实验完成
+> **一句话**: ❌ **DG2 关闭**：延迟中位数=0秒（礼物立即发生），Chapelle延迟校正不仅无效（ECE改善-0.010），反而使校准变差。**延迟反馈不是KuaiLive数据的核心问题。**
 
 | 验证问题 | 结果 | 结论 |
 |---------|------|------|
-| DG2: 延迟校正的增益有多大？ | ⏳ | 待验证 |
+| DG2: 延迟校正的增益有多大？ | ❌ | ECE改善 **-0.010** (负值！变差) << 0.02阈值 |
 
-| 指标 | Chapelle | Survival | Baseline (无校正) |
-|------|----------|----------|------------------|
-| ECE | TODO | TODO | 0.018 (已有) |
-| 近期样本PR-AUC | TODO | TODO | TODO |
+| 指标 | Baseline | Chapelle | Delta | 胜者 |
+|------|----------|----------|-------|------|
+| ECE | **0.0179** | 0.0276 | -0.010 | Baseline ✅ |
+| PR-AUC | 0.651 | **0.692** | +0.041 | Chapelle |
+| ROC-AUC | 0.990 | 0.991 | +0.001 | ≈ |
+| Brier | **0.0147** | 0.0152 | +0.0005 | Baseline |
+| Log Loss | **0.053** | 0.055 | +0.003 | Baseline |
+
+> ⚠️ **注意**: 延迟中位数=0秒，说明大多数礼物在点击后立即发生，延迟反馈问题不存在
 
 | Type | Link |
 |------|------|
-| 🧠 Hub | `experiments/gift_allocation/gift_allocation_hub.md` § DG2 |
-| 🗺️ Roadmap | `experiments/gift_allocation/gift_allocation_roadmap.md` § MVP-1.2 |
+| 🧠 Hub | `gift_allocation/gift_allocation_hub.md` § DG2 |
+| 🗺️ Roadmap | `gift_allocation/gift_allocation_roadmap.md` § MVP-1.2 |
 
 ---
 
@@ -94,13 +99,20 @@ $$h(t|x) = \frac{k}{\lambda(x)} \left(\frac{t}{\lambda(x)}\right)^{k-1}$$
 |----|-----|
 | 来源 | KuaiLive |
 | 路径 | `data/KuaiLive/` |
-| 样本 | click 全量 + timestamp |
-| 关键字段 | click_time, gift_time (if any), watch_duration |
-| 延迟定义 | gift_time - click_time |
+| Train | 1,872,509 |
+| Val | 1,701,600 |
+| Test | 1,335,406 |
+| 打赏率 | 1.93% |
+| 关键字段 | click.timestamp, gift.timestamp, watch_live_time |
 
-**延迟分布估计**:
-- 从历史打赏样本中估计 $T$ 的分布
-- 预期：Weibull 或 LogNormal
+**延迟分布估计** (从 77,824 个有效打赏样本):
+- **最佳拟合**: Weibull (shape=0.94, scale=3253s ≈ 54min)
+- **中位数延迟**: **0.0 秒** ⚠️ 大多数礼物立即发生
+- **平均延迟**: 461 秒 (7.7 min)
+- **P90 延迟**: 1,021 秒 (17 min)
+- **P99 延迟**: 8,617 秒 (144 min)
+- **相对延迟 >50% 观看时间**: 0.7% (极少)
+- **相对延迟 >90% 观看时间**: 0.1% (几乎没有)
 
 ## 3.2 模型
 
@@ -134,50 +146,94 @@ $$h(t|x) = \frac{k}{\lambda(x)} \left(\frac{t}{\lambda(x)}\right)^{k-1}$$
 
 # 4. 📊 图表
 
-> 待实验完成后填写
-
 ### Fig 1: Delay Distribution
 ![](../img/delay_distribution.png)
+> **观察**: 
+> - **左图**: 正延迟样本的延迟分布，Weibull 拟合良好
+> - **中图**: 延迟 CDF，大多数礼物在几分钟内完成
+> - **右图**: **关键发现** - **84.1% 的礼物延迟=0（立即发生）**，只有 15.9% 有正延迟
 
-### Fig 2: ECE by Time Window
-![](../img/delay_ece_by_window.png)
-
-### Fig 3: Calibration Curve Comparison
+### Fig 2: Calibration Curve Comparison
 ![](../img/delay_calibration_comparison.png)
+> **观察**: 
+> - **左图**: 校准曲线 - Baseline 更接近对角线，Chapelle 略偏离
+> - **右图**: 预测分布 - 两种方法预测分布相似
 
-### Fig 4: PR-AUC by Recency
-![](../img/delay_prauc_by_recency.png)
+### Fig 3: ECE Comparison
+![](../img/delay_ece_comparison.png)
+> **观察**: 
+> - **左图**: ECE 对比 - **Baseline (0.018) 优于 Chapelle (0.028)**
+> - **右图**: 所有指标对比 - Chapelle 仅在 PR-AUC 上略优，但其他指标均劣于 Baseline
 
 ---
 
 # 5. 💡 洞见
 
-> 待实验完成后填写
+## 5.1 延迟问题不存在的原因
+
+1. **礼物即时发生**: 延迟中位数=0秒，84.1%的礼物在点击后立即发生
+2. **观察窗口足够**: 用户停留时间（watch_live_time）足以覆盖几乎所有潜在打赏
+3. **"延迟反馈"在此场景不成立**: 广告 CVR 场景中用户离开后仍可能转化，但直播打赏必须在观看期间完成
+
+## 5.2 Chapelle 方法反效果分析
+
+- **软标签加权**: 对未打赏样本赋予 weight = 1 - F(剩余时间)
+- **实际效果**: 由于延迟 CDF 在 0 附近陡峭，大量负样本权重被下调到 0.76
+- **副作用**: 削弱了模型对"真负样本"的学习，导致校准变差
+
+## 5.3 K2 假设更新
+
+> ~~K2: 延迟反馈不能简单当负例，会系统性低估~~ 
+
+**更新**: 对于 KuaiLive 直播打赏场景，延迟不是问题（中位数=0），简单负例处理已足够。
+- 原假设来自广告 CVR 文献，但直播打赏的行为模式不同
+- 打赏是即时冲动行为，不像购买转化需要思考时间
+
+## 5.4 设计启示
+
+1. **不同场景验证假设**: 文献结论需在具体数据上验证
+2. **简单模型优先**: 无需引入延迟校正复杂性
+3. **关注真正瓶颈**: 延迟不是瓶颈，应转向特征工程或分配层
 
 ---
 
 # 6. 📝 结论
 
-> 待实验完成后填写
-
 ## 6.1 核心发现
 
-> TODO
+1. ❌ **DG2 关闭**: 延迟校正（Chapelle方法）ECE 改善 **-0.010**（变差！），远低于 0.02 阈值
+2. ⚠️ **延迟不是问题**: 延迟中位数=0秒，84.1%的礼物立即发生
+3. ✅ **延迟分布已刻画**: Weibull(shape=0.94, scale=3253s)，但意义有限
+4. ✅ **Baseline 架构足够**: 无需复杂延迟校正
 
 ## 6.2 关键数字
 
-| 指标 | Baseline | Chapelle | Survival | 最优 |
-|------|----------|----------|----------|------|
-| ECE | TODO | TODO | TODO | TODO |
-| 近期PR-AUC | TODO | TODO | TODO | TODO |
-| 整体PR-AUC | TODO | TODO | TODO | TODO |
+| 指标 | Baseline | Chapelle | Delta | 最优 |
+|------|----------|----------|-------|------|
+| ECE | **0.0179** | 0.0276 | -0.010 | Baseline |
+| Brier Score | **0.0147** | 0.0152 | +0.0005 | Baseline |
+| Log Loss | **0.053** | 0.055 | +0.003 | Baseline |
+| PR-AUC | 0.651 | **0.692** | +0.041 | Chapelle |
+| ROC-AUC | 0.990 | 0.991 | +0.001 | ≈ |
 
-## 6.3 下一步
+> **ECE 改善 = -0.010 < 0.02 → DG2 关闭**
+
+## 6.3 设计决策
+
+| 决策 | 理由 |
+|------|------|
+| ❌ 关闭延迟校正方向 (DG2) | ECE 反降，延迟中位数=0 |
+| ✅ 保留 Baseline 架构 | 校准性能更优 |
+| 🔄 更新 K2 假设 | 延迟反馈假设在直播打赏场景不成立 |
+
+## 6.4 下一步
 
 | 方向 | 任务 | 优先级 |
 |------|------|--------|
-| If 延迟校正有效 | 集成到主模型 | 🔴 |
-| 无论结果 | MVP-0.3 Simulator构建 | 🟡 |
+| ❌ 延迟校正 | 关闭此方向 | - |
+| 🟡 特征工程 | 优化 Direct Regression，目标 Top-1% ≥ 60% | P1 |
+| 🟡 Simulator | MVP-0.3 构建打赏模拟器，为分配层做准备 | P2 |
+| ⏳ 多任务学习 | MVP-1.3 用密集信号扶起稀疏打赏 | P3 |
 
 ---
 
@@ -189,19 +245,46 @@ $$h(t|x) = \frac{k}{\lambda(x)} \left(\frac{t}{\lambda(x)}\right)^{k-1}$$
 |----|-----|
 | 脚本 | `scripts/train_delay_modeling.py` |
 | 日志 | `logs/delay_modeling_20260108.log` |
-| 结果 JSON | `experiments/gift_allocation/results/delay_modeling_20260108.json` |
+| 结果 JSON | `gift_allocation/results/delay_modeling_20260108.json` |
+| 训练时间 | Baseline: 2.0s, Chapelle: 1.9s |
+| 总运行时间 | 103.8s |
 
-## 7.2 参考文献
+## 7.2 延迟分布参数
+
+| 项 | 值 |
+|------|------|
+| 有效延迟样本 | 77,824 |
+| Weibull shape | 0.940 |
+| Weibull scale | 3,253 秒 (54 min) |
+| 延迟中位数 | **0.0 秒** |
+| 延迟均值 | 461 秒 (7.7 min) |
+| 延迟 P90 | 1,021 秒 (17 min) |
+| 延迟 P99 | 8,617 秒 (144 min) |
+
+## 7.3 Chapelle 权重分布
+
+| 项 | 值 |
+|------|------|
+| 负样本数 | 1,838,409 |
+| 权重范围 | [0.298, 1.000] |
+| 权重均值 | 0.764 |
+
+> 大量负样本权重被下调至 ~0.76，削弱了对真负样本的学习
+
+## 7.4 参考文献
 
 | 论文 | 要点 |
 |------|------|
 | Chapelle (2014) | Modeling Delayed Feedback in Display Advertising |
-| WeightedFeedback | 广告CVR延迟校正方法 |
+| scipy.stats | Weibull 分布拟合 |
 
-## 7.3 相关原则
+## 7.5 相关原则更新
 
-- P4 (Hub): 新数据近期样本不能当负例 → 延迟校正或删失处理
+- ~~P4 (Hub): 新数据近期样本不能当负例 → 延迟校正或删失处理~~ 
+- **更新**: 对于 KuaiLive 直播打赏场景，延迟问题不存在（中位数=0），简单负例处理已足够
+- **新增**: 文献假设需在具体数据上验证，不同场景行为模式差异大
 
 ---
 
-> **实验创建时间**: 2026-01-08
+> **实验创建时间**: 2026-01-08  
+> **实验完成时间**: 2026-01-08
