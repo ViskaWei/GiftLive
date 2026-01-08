@@ -11,7 +11,8 @@ experiments/
 ├── [topic]/                    # 各主题实验目录
 │   ├── [topic]_hub.md          # 智库导航（问题树、假设、洞见、设计原则）
 │   ├── [topic]_roadmap.md      # 实验追踪（MVP 列表、进度、数值结果）
-│   ├── exp_*.md                # 子实验报告
+│   ├── exp/                    # 子实验报告目录
+│   │   └── exp_*.md            # 子实验报告
 │   ├── card_*.md               # 知识卡片
 │   ├── sessions/               # GPT 会话归档
 │   ├── prompts/                # Coding Prompt 文件
@@ -363,7 +364,7 @@ Layer 2b: 🗺️ 实验追踪层 (Roadmap)
          experiments/[topic]/[topic]_roadmap.md
 
 Layer 3: 📗 单实验层
-         experiments/[topic]/exp_*.md
+         experiments/[topic]/exp/exp_*.md
 
 Layer 4: 📇 知识卡片层
          experiments/[topic]/card/ 或 experiments/card/
@@ -423,8 +424,8 @@ GPT 讨论 → session.md
 | 命令 | 作用 | 文件 |
 |------|------|------|
 | `?` | 查看进度状态 | `status/` |
-| `n` | 新建实验计划 | `experiments/[topic]/exp_*.md` |
-| `a` | 归档实验结果 | `experiments/[topic]/exp_*.md` |
+| `n` | 新建实验计划 | `experiments/[topic]/exp/exp_*.md` |
+| `a` | 归档实验结果 | `experiments/[topic]/exp/exp_*.md` |
 | `u [exp_id]` | 完整更新：补全exp+同步hub/roadmap+git push | `experiments/[topic]/` |
 | `p` | 生成 Coding Prompt | `experiments/[topic]/prompts/` |
 | `merge` | 合并相似实验 | `experiments/[topic]/exp_*_consolidated_*.md` |

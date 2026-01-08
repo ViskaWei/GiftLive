@@ -14,7 +14,7 @@ Gate：Phase 0 - 数据探索 + Baseline建立
 |------|------|
 | 🧠 Hub | `gift_allocation_hub.md` |
 | 📋 Kanban | `status/kanban.md` |
-| 📗 Experiments | `exp_*.md` |
+| 📗 Experiments | `exp/exp_*.md` |
 
 ---
 
@@ -65,7 +65,7 @@ Gate：Phase 0 - 数据探索 + Baseline建立
 |--------|-----|------|------|
 | ✅ | MVP-0.1 | - | ✅ 数据探索完成 |
 | ✅ | MVP-0.2 | - | ✅ Baseline完成 (Top-1%=56.2%) |
-| 🔴 P0 | MVP-1.1 | Gate-1 | ⏳ 待启动 |
+| 🔴 P0 | MVP-1.1 | Gate-1 | 🔴 就绪 (Prompt 已生成) |
 
 ---
 
@@ -75,10 +75,10 @@ Gate：Phase 0 - 数据探索 + Baseline建立
 
 | MVP | 名称 | Phase | Gate | 状态 | exp_id | 报告 |
 |-----|------|-------|------|------|--------|------|
-| 0.1 | KuaiLive数据探索 | 0 | - | ✅ | EXP-20260108-gift-allocation-01 | [exp_kuailive_eda_20260108.md](./exp_kuailive_eda_20260108.md) |
-| 0.2 | Baseline(直接回归) | 0 | - | ✅ | EXP-20260108-gift-allocation-02 | [exp_baseline_20260108.md](./exp_baseline_20260108.md) |
+| 0.1 | KuaiLive数据探索 | 0 | - | ✅ | EXP-20260108-gift-allocation-01 | [exp_kuailive_eda_20260108.md](./exp/exp_kuailive_eda_20260108.md) |
+| 0.2 | Baseline(直接回归) | 0 | - | ✅ | EXP-20260108-gift-allocation-02 | [exp_baseline_20260108.md](./exp/exp_baseline_20260108.md) |
 | 0.3 | Simulator V1构建 | 0 | - | ⏳ | - | - |
-| 1.1 | 两段式建模 | 1 | Gate-1 | ⏳ | - | - |
+| 1.1 | 两段式建模 | 1 | Gate-1 | 🔴 | EXP-20260108-gift-allocation-03 | - |
 | 1.2 | 延迟反馈建模(生存) | 1 | Gate-1 | ⏳ | - | - |
 | 1.3 | 多任务学习 | 1 | Gate-1 | ⏳ | - | - |
 | 2.1 | 凹收益分配层 | 2 | Gate-2 | ⏳ | - | - |
@@ -206,8 +206,7 @@ Gate：Phase 0 - 数据探索 + Baseline建立
 ⏳计划    🔴就绪    🚀运行    ✅完成
                               MVP-0.1
                               MVP-0.2
-MVP-0.3
-MVP-1.1
+MVP-0.3   MVP-1.1
 MVP-1.2
 MVP-1.3
 MVP-2.1
@@ -325,3 +324,4 @@ watch_duration:
 | 日期 | 变更 | 章节 |
 |------|------|------|
 | 2026-01-08 | 创建Roadmap | 全部 |
+| 2026-01-08 | MVP-1.1 Coding Prompt 生成 | §2.1, §4.1 |

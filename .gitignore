@@ -1,0 +1,27 @@
+# Data files (too large)
+data/
+*.zip
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+*.egg-info/
+.eggs/
+
+# Logs and temp files
+*.pid
+*.log
+
+# Models (if large, uncomment)
+# experiments/*/models/*.pkl
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

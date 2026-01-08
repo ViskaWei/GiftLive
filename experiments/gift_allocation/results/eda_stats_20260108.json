@@ -1,0 +1,40 @@
+{
+  "experiment_id": "EXP-20260108-gift-allocation-01",
+  "date": "2026-01-08 13:24:40",
+  "gift_rate": 1.0,
+  "amount_stats": {
+    "mean": 82.67644467692647,
+    "std": 652.6767114175668,
+    "median": 2.0,
+    "p90": 88.0,
+    "p95": 298.0,
+    "p99": 1488.2000000000116,
+    "max": 56246.0
+  },
+  "gini": {
+    "user": 0.9420219203212854,
+    "streamer": 0.9304173223898978
+  },
+  "top_concentration": {
+    "top_1pct_users_share": 0.5986335921418728,
+    "top_5pct_users_share": 0.8492815569737033,
+    "top_10pct_users_share": 0.9270160251730195,
+    "top_1pct_streamers_share": 0.5338882235482416,
+    "top_5pct_streamers_share": 0.8122229801537201,
+    "top_10pct_streamers_share": 0.9074934154585503
+  },
+  "sparsity": {
+    "matrix_density": 6.406279502602972e-05,
+    "cold_start_user_ratio": 0.0,
+    "cold_start_streamer_ratio": 0.9218551503354904
+  },
+  "basic_counts": {
+    "total_gift_records": 72646,
+    "unique_gift_users": 23772,
+    "unique_gift_streamers": 35370,
+    "unique_click_users": 23772
+  },
+  "temporal": {
+    "peak_hour": 12
+  }
+}

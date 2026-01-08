@@ -155,7 +155,7 @@ Legend: ✅ 已验证 | ❌ 已否定 | 🔆 进行中 | ⏳ 待验证 | 🗑️
 |---|---|---|
 | 🗺️ Roadmap | `./gift_allocation_roadmap.md` | Decision Gates + MVP 执行 |
 | 📋 Kanban | `status/kanban.md` | 进度中控 |
-| 📗 Experiments | `experiments/gift_allocation/exp_*.md` | 单实验报告 |
+| 📗 Experiments | `experiments/gift_allocation/exp/exp_*.md` | 单实验报告 |
 | 📊 Consolidated | `experiments/gift_allocation/gift_allocation_consolidated_*.md` | 跨实验综合 |
 
 ---
