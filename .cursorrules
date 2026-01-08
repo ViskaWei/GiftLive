@@ -14,7 +14,10 @@ source init.sh
 ## 📁 项目结构
 
 ### 报告输出位置
-所有实验报告必须保存到：`/home/swei20/GiftLive/experiments/`
+默认保存位置：`/home/swei20/GiftLive/experiments/`
+
+专题例外（已迁移）：
+- `gift_allocation` → `~/GiftLive/gift_allocation/`（结构与 experiments/[topic] 一致：含 `exp/`, `img/`, `prompts/`, `results/`, `models/`）
 
 ### 目录结构
 ```
@@ -41,6 +44,18 @@ _backend/template/
 ├── prompt_coding.md            # 实验 Coding Prompt 模板
 ├── session.md                  # GPT 会话归档模板
 └── card.md                     # 知识卡片模板
+```
+
+```
+gift_allocation/                 # 专题 gift_allocation（顶层目录）
+├── gift_allocation_hub.md
+├── gift_allocation_roadmap.md
+├── exp/
+│   └── exp_*.md
+├── prompts/
+├── img/
+├── results/
+└── models/
 ```
 
 ### 文件命名规范
@@ -101,7 +116,9 @@ _backend/template/
 #### 🤖 实验 Coding Prompt
 **模板文件**: `_backend/template/prompt_coding.md`
 
-**输出位置**: `experiments/[topic]/prompts/coding_prompt_[name]_YYYYMMDD.md`
+**输出位置**: 
+- 通用：`experiments/[topic]/prompts/coding_prompt_[name]_YYYYMMDD.md`
+- gift_allocation 专题：`gift_allocation/prompts/coding_prompt_[name]_YYYYMMDD.md`
 
 **必需内容**：
 1. 实验 ID 与元数据
@@ -133,7 +150,7 @@ _backend/template/
 - ❌ 不做：指导下一步实验（这是 hub 的职责）
 
 **位置规则**：
-- 单主题 → `experiments/[topic]/card/`
+- 单主题 → `experiments/[topic]/card/`（gift_allocation 专题：`gift_allocation/card/`）
 - 跨主题 → `experiments/card/`
 
 ### 格式要求

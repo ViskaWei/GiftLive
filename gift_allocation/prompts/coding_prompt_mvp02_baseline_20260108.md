@@ -70,7 +70,7 @@ training:
   cv_folds: null  # 使用固定 train/val/test 切分
   early_stopping: true
   save_model: true
-  model_path: "experiments/gift_allocation/models/baseline_lgb_20260108.pkl"
+  model_path: "gift_allocation/models/baseline_lgb_20260108.pkl"
 ```
 
 ### 2.4 评估指标
@@ -98,11 +98,11 @@ metrics:
 
 | 图号 | 图表类型 | X轴 | Y轴 | 保存路径 |
 |------|---------|-----|-----|---------|
-| Fig1 | scatter | Predicted log(1+Y) | Actual log(1+Y) | `experiments/gift_allocation/img/baseline_pred_vs_actual.png` |
-| Fig2 | bar | Feature | Importance | `experiments/gift_allocation/img/baseline_feature_importance.png` |
-| Fig3 | line | Top-K% Threshold | Capture Rate | `experiments/gift_allocation/img/baseline_topk_capture.png` |
-| Fig4 | line | Training Iteration | MAE (train/val) | `experiments/gift_allocation/img/baseline_learning_curve.png` |
-| Fig5 | bar | Bucket (pred decile) | Mean Actual vs Mean Pred | `experiments/gift_allocation/img/baseline_calibration.png` |
+| Fig1 | scatter | Predicted log(1+Y) | Actual log(1+Y) | `gift_allocation/img/baseline_pred_vs_actual.png` |
+| Fig2 | bar | Feature | Importance | `gift_allocation/img/baseline_feature_importance.png` |
+| Fig3 | line | Top-K% Threshold | Capture Rate | `gift_allocation/img/baseline_topk_capture.png` |
+| Fig4 | line | Training Iteration | MAE (train/val) | `gift_allocation/img/baseline_learning_curve.png` |
+| Fig5 | bar | Bucket (pred decile) | Mean Actual vs Mean Pred | `gift_allocation/img/baseline_calibration.png` |
 
 **图表要求**：
 - 所有文字必须英文
@@ -131,7 +131,7 @@ metrics:
 ## 5. 📝 最终交付物
 
 ### 5.1 实验报告
-- **路径**: `experiments/gift_allocation/exp_baseline_20260108.md`
+- **路径**: `gift_allocation/exp/exp_baseline_20260108.md`
 - **模板**: `_backend/template/exp.md`
 - **必须包含**:
   - ⚡ 核心结论速览（MAE, Top-1% 捕获率, Spearman）
@@ -139,11 +139,11 @@ metrics:
   - 📝 结论（baseline 性能分析 + 改进方向）
 
 ### 5.2 图表文件
-- **路径**: `experiments/gift_allocation/img/`
+- **路径**: `gift_allocation/img/`
 
 ### 5.3 数值结果
 - **格式**: JSON
-- **路径**: `experiments/gift_allocation/results/baseline_results_20260108.json`
+- **路径**: `gift_allocation/results/baseline_results_20260108.json`
 - **内容**:
 ```json
 {
@@ -169,7 +169,7 @@ metrics:
 ```
 
 ### 5.4 模型文件
-- **路径**: `experiments/gift_allocation/models/baseline_lgb_20260108.pkl`
+- **路径**: `gift_allocation/models/baseline_lgb_20260108.pkl`
 
 ---
 

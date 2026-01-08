@@ -72,6 +72,8 @@ sweep:
 | Fig1 | [line/bar/scatter] | [参数] | [指标] | `experiments/[topic]/img/[name].png` |
 | Fig2 | [type] | [...] | [...] | `experiments/[topic]/img/[name].png` |
 
+> 注：若主题为 gift_allocation，请将保存路径改为 `gift_allocation/img/[name].png`
+
 **图表要求**：
 - 所有文字必须英文
 - 包含 legend、title、axis labels
@@ -97,7 +99,8 @@ sweep:
 ## 5. 📝 最终交付物
 
 ### 5.1 实验报告
-- **路径**: `experiments/[topic]/exp_[name]_YYYYMMDD.md`
+- **路径（通用）**: `experiments/[topic]/exp/exp_[name]_YYYYMMDD.md`
+- **路径（gift_allocation 专题）**: `gift_allocation/exp/exp_[name]_YYYYMMDD.md`
 - **模板**: `_backend/template/exp.md`
 - **必须包含**:
   - ⚡ 核心结论速览（一句话 + 关键数字）
@@ -105,12 +108,14 @@ sweep:
   - 📝 结论（假设验证 + 设计启示）
 
 ### 5.2 图表文件
-- **路径**: `experiments/[topic]/img/`
+- **路径（通用）**: `experiments/[topic]/img/`
+- **路径（gift_allocation 专题）**: `gift_allocation/img/`
 - **命名**: `[descriptive_name].png`
 
 ### 5.3 数值结果
 - **格式**: CSV 或 JSON
-- **路径**: `experiments/[topic]/results/`
+- **路径（通用）**: `experiments/[topic]/results/`
+- **路径（gift_allocation 专题）**: `gift_allocation/results/`
 
 ---
 

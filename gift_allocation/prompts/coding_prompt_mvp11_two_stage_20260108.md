@@ -118,12 +118,12 @@ baseline:
 
 | 图号 | 图表类型 | X轴 | Y轴 | 保存路径 |
 |------|---------|-----|-----|---------|
-| Fig1 | bar | Model (Baseline / Two-Stage / Two-Stage+Focal) | Top-1% Capture | `experiments/gift_allocation/img/two_stage_comparison_topk.png` |
-| Fig2 | line | Top-K% Threshold (1-50%) | Capture Rate | `experiments/gift_allocation/img/two_stage_topk_curve.png` |
-| Fig3 | bar | Model | PR-AUC (Stage 1) | `experiments/gift_allocation/img/two_stage_prauc.png` |
-| Fig4 | scatter | Predicted p(x) | Actual Gift Rate (binned) | `experiments/gift_allocation/img/two_stage_calibration_stage1.png` |
-| Fig5 | scatter | Predicted v(x) = p(x)·m(x) | Actual Y | `experiments/gift_allocation/img/two_stage_pred_vs_actual.png` |
-| Fig6 | bar (horizontal) | Feature | Importance | `experiments/gift_allocation/img/two_stage_feature_importance.png` |
+| Fig1 | bar | Model (Baseline / Two-Stage / Two-Stage+Focal) | Top-1% Capture | `gift_allocation/img/two_stage_comparison_topk.png` |
+| Fig2 | line | Top-K% Threshold (1-50%) | Capture Rate | `gift_allocation/img/two_stage_topk_curve.png` |
+| Fig3 | bar | Model | PR-AUC (Stage 1) | `gift_allocation/img/two_stage_prauc.png` |
+| Fig4 | scatter | Predicted p(x) | Actual Gift Rate (binned) | `gift_allocation/img/two_stage_calibration_stage1.png` |
+| Fig5 | scatter | Predicted v(x) = p(x)·m(x) | Actual Y | `gift_allocation/img/two_stage_pred_vs_actual.png` |
+| Fig6 | bar (horizontal) | Feature | Importance | `gift_allocation/img/two_stage_feature_importance.png` |
 
 **图表要求**：
 - 所有文字必须英文
@@ -153,7 +153,7 @@ baseline:
 ## 5. 📝 最终交付物
 
 ### 5.1 实验报告
-- **路径**: `experiments/gift_allocation/exp/exp_two_stage_20260108.md`
+- **路径**: `gift_allocation/exp/exp_two_stage_20260108.md`
 - **模板**: `_backend/template/exp.md`
 - **必须包含**:
   - ⚡ 核心结论速览（一句话 + 假设验证 + 关键数字）
@@ -161,7 +161,7 @@ baseline:
   - 📝 结论（两段式是否优于 Baseline）
 
 ### 5.2 图表文件
-- **路径**: `experiments/gift_allocation/img/two_stage_*.png`
+- **路径**: `gift_allocation/img/two_stage_*.png`
 - **命名**: 
   - `two_stage_comparison_topk.png`
   - `two_stage_topk_curve.png`
@@ -172,7 +172,7 @@ baseline:
 
 ### 5.3 数值结果
 - **格式**: JSON
-- **路径**: `experiments/gift_allocation/results/two_stage_results_20260108.json`
+- **路径**: `gift_allocation/results/two_stage_results_20260108.json`
 - **结构**:
 ```json
 {
@@ -191,7 +191,7 @@ baseline:
 ```
 
 ### 5.4 模型文件
-- **路径**: `experiments/gift_allocation/models/`
+- **路径**: `gift_allocation/models/`
 - **文件**:
   - `two_stage_clf_20260108.pkl` (Stage 1 分类器)
   - `two_stage_reg_20260108.pkl` (Stage 2 回归器)
