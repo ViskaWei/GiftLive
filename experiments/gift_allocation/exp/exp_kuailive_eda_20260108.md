@@ -97,7 +97,7 @@ $$
 # 4. 📊 图表
 
 ### Fig 1: Gift Amount Distribution (Log Scale)
-![](./img/gift_amount_distribution.png)
+![](../img/gift_amount_distribution.png)
 
 **观察**:
 - 打赏金额经 log(1+x) 变换后近似正态分布
@@ -107,7 +107,7 @@ $$
 ---
 
 ### Fig 2: Gift Amount Distribution (Raw)
-![](./img/gift_amount_distribution_raw.png)
+![](../img/gift_amount_distribution_raw.png)
 
 **观察**:
 - 原始分布极度右偏，大量小额打赏
@@ -117,7 +117,7 @@ $$
 ---
 
 ### Fig 3: Gift Amount Percentiles
-![](./img/gift_amount_percentiles.png)
+![](../img/gift_amount_percentiles.png)
 
 **观察**:
 - P50=2, P90=88, P99=1488
@@ -127,7 +127,7 @@ $$
 ---
 
 ### Fig 4: User Lorenz Curve
-![](./img/user_lorenz_curve.png)
+![](../img/user_lorenz_curve.png)
 
 **观察**:
 - **Gini = 0.9420**，极高集中度
@@ -138,7 +138,7 @@ $$
 ---
 
 ### Fig 5: Streamer Lorenz Curve
-![](./img/streamer_lorenz_curve.png)
+![](../img/streamer_lorenz_curve.png)
 
 **观察**:
 - **Gini = 0.9304**，头部主播效应显著
@@ -148,7 +148,7 @@ $$
 ---
 
 ### Fig 6: Gifts per User Distribution
-![](./img/gifts_per_user_distribution.png)
+![](../img/gifts_per_user_distribution.png)
 
 **观察**:
 - 平均每用户打赏 3.06 次
@@ -158,7 +158,7 @@ $$
 ---
 
 ### Fig 7: Gifts per Streamer Distribution
-![](./img/gifts_per_streamer_distribution.png)
+![](../img/gifts_per_streamer_distribution.png)
 
 **观察**:
 - 平均每主播收到 2.05 次打赏
@@ -168,7 +168,7 @@ $$
 ---
 
 ### Fig 8: Hourly Pattern
-![](./img/hourly_pattern.png)
+![](../img/hourly_pattern.png)
 
 **观察**:
 - 打赏高峰时段：12:00 (午间) 和 20:00-22:00 (晚间)
@@ -178,7 +178,7 @@ $$
 ---
 
 ### Fig 9: User-Streamer Interaction Matrix
-![](./img/user_streamer_interaction_matrix.png)
+![](../img/user_streamer_interaction_matrix.png)
 
 **观察**:
 - 仅展示 Top 100 用户 × Top 100 主播

@@ -115,7 +115,7 @@ $$
 # 4. 📊 图表
 
 ### Fig 1: Predicted vs Actual (log space)
-![](./img/baseline_pred_vs_actual.png)
+![](../img/baseline_pred_vs_actual.png)
 
 **观察**:
 - 预测值与真实值有较强相关性
@@ -123,7 +123,7 @@ $$
 - 整体趋势贴近对角线
 
 ### Fig 2: Feature Importance
-![](./img/baseline_feature_importance.png)
+![](../img/baseline_feature_importance.png)
 
 **观察**:
 - **pair_gift_mean** (用户-主播历史平均打赏) 是最重要特征，重要性远超其他
@@ -132,7 +132,7 @@ $$
 - 用户/主播画像特征相对不重要
 
 ### Fig 3: Top-K% Capture Rate
-![](./img/baseline_topk_capture.png)
+![](../img/baseline_topk_capture.png)
 
 **观察**:
 - Top-1% 捕获率 56.2%，远超 30% 基准
@@ -141,14 +141,14 @@ $$
 - 曲线呈现快速上升后趋于平稳
 
 ### Fig 4: Learning Curve
-![](./img/baseline_learning_curve.png)
+![](../img/baseline_learning_curve.png)
 
 **观察**:
 - Best iteration: 123 (early stopped from 500)
 - 模型快速收敛，无过拟合迹象
 
 ### Fig 5: Calibration by Prediction Decile
-![](./img/baseline_calibration.png)
+![](../img/baseline_calibration.png)
 
 **观察**:
 - 预测分桶与实际金额分布基本一致
