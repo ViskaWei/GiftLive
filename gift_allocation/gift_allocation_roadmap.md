@@ -405,9 +405,9 @@
 | EXP-20260108-gift-allocation-09 | Coldstart Constraint | ✅ | 2.2 |
 | EXP-20260108-gift-allocation-10 | OPE Validation | ✅ | 3.1 |
 | **EXP-20260108-gift-allocation-11** | **Two-Stage Diagnosis** | ✅ | **1.4** |
-| **EXP-20260108-gift-allocation-12** | **Stage2 Improve + Pipeline** | ⏳ | **1.5** |
-| **EXP-20260108-gift-allocation-13** | **Delay Audit** | 🔴 | **1.2-audit** |
-| **EXP-20260108-gift-allocation-14** | **Delay Pseudo-Online** | ⏳ | **1.2-pseudo** |
+| MVP-1.5 | Stage2 Improve + Pipeline | ⏳ 待定 | 召回-精排分工（可选） |
+| **EXP-20260108-gift-allocation-13** | **Delay Audit** | ✅ | **1.2-audit** |
+| ~~EXP-14~~ | ~~Delay Pseudo-Online~~ | ❌取消 | ~~1.2-pseudo~~ |
 
 ## 5.2 数据源
 
