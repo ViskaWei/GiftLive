@@ -29,8 +29,9 @@
 | Baseline (直接回归 gift-only) | Top-1%=56.2%, Spearman=0.891, MAE(log)=0.263 | LightGBM gift-only | MVP-0.2 ✅ |
 | 两段式 (p×m) | PR-AUC=0.65, ECE=0.018 (Stage1) | LightGBM click | MVP-1.1 ✅ ⚠️不可对比 |
 | **Direct Reg (click全量)** | **Top-1%=54.5%, Spearman=0.331** | LightGBM click全量 | ✅ MVP-1.1-fair **胜出** |
-| **Two-Stage (click全量)** | Top-1%=35.8%, Spearman=0.247 | LightGBM click全量 | ✅ MVP-1.1-fair |
-| Upper bound | TODO | Oracle | 理论上限 |
+| **Two-Stage V2 (click全量)** | Top-1%=35.7%, NDCG@100=0.359, ROC-AUC=0.991 | LightGBM click全量 | ✅ MVP-1.1-fair V2 验证 |
+| 二分类上限 (Y>0) | Top-1%=51.7% | 理论参考 | gift占1.93%，Top-1%最多命中52% |
+| Upper bound | Top-1%=100% | Oracle | 完美预测 |
 
 ---
 
@@ -101,8 +102,9 @@ Legend: ✅ 已验证 | ❌ 已否定 | 🔆 进行中 | ⏳ 待验证 | 🗑️
 | I2 | Baseline 已有较高性能 | Top-1%=56.2%远超30%基准 | 直接回归+交互特征已捕捉核心信号 | 两段式需证明显著提升才值得复杂度 | MVP-0.2 |
 | I3 | 模型对比需统一候选集 | MVP-1.1两段式与Baseline在不同数据集训练 | Baseline只看gift-only，Two-Stage看click全量 | 必须在相同候选集上公平对比 | MVP-1.1 |
 | I4 | 分类层和回归层学到不同信号 | Stage1用count特征，Stage2用mean特征 | 是否打赏和打赏多少是不同问题 | 两阶段设计有合理性 | MVP-1.1 |
-| **I5** | **公平对比下直接回归更优** | Direct Top-1%=54.5% vs Two-Stage=35.8% | 98% Y=0 时直接回归学会"谁不送礼"；Stage1 仅9轮early stop | 保留简单架构，优化特征 | MVP-1.1-fair |
-| I6 | Two-Stage 在高稀疏场景失效 | Stage1 只训练9轮 | 正样本太少(1.82%)，分类器快速饱和 | 高稀疏场景慎用两阶段 | MVP-1.1-fair |
+| **I5** | **公平对比下直接回归更优（V2验证）** | Direct Top-1%=54.5% vs Two-Stage=35.7% | V2修复Stage1(68轮,ROC=0.991)后仍落后18.8pp；问题在Stage2信息量不足(34k vs 1.87M) | 保留简单架构，优化特征 | MVP-1.1-fair V1+V2 |
+| I6 | p(x)×m(x)乘法组合引入排序噪声 | Two-Stage(35.7%) < 二分类上限(51.7%) | p偏高→v等比例放大；Stage2外推不准 | 高稀疏场景慎用两阶段 | MVP-1.1-fair V2 |
+| I7 | Two-Stage 在 NDCG@100 上更优 | NDCG@100: 35.9% vs 21.7% (+14.2pp) | 在金主内部，m(x)能更好区分金额大小 | 若关注精细排序可考虑Two-Stage | MVP-1.1-fair V2 |
 
 ---
 
