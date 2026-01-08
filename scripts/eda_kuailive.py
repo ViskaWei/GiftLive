@@ -271,7 +271,7 @@ def analyze_sparsity(gift_df, click_df, streamer_df):
 
 def plot_fig1_amount_log_distribution(amounts, output_path):
     """Fig1: Gift amount distribution (log scale)."""
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(6, 5))
     
     log_amounts = np.log1p(amounts)
     ax.hist(log_amounts, bins=50, edgecolor='black', alpha=0.7, color='steelblue')
@@ -293,7 +293,7 @@ def plot_fig1_amount_log_distribution(amounts, output_path):
 
 def plot_fig2_amount_raw_distribution(amounts, output_path):
     """Fig2: Gift amount distribution (raw)."""
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(6, 5))
     
     # Clip extreme values for visualization
     amounts_clipped = np.clip(amounts, 0, np.percentile(amounts, 99))
@@ -312,7 +312,7 @@ def plot_fig3_percentiles(amounts, output_path):
     percentiles = [10, 25, 50, 75, 90, 95, 99]
     values = [np.percentile(amounts, p) for p in percentiles]
     
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(6, 5))
     bars = ax.bar([f'P{p}' for p in percentiles], values, color='teal', edgecolor='black')
     ax.set_xlabel('Percentile')
     ax.set_ylabel('Gift Amount')
@@ -337,7 +337,7 @@ def plot_fig4_user_lorenz(user_gifts, output_path):
     
     gini = compute_gini(amounts)
     
-    fig, ax = plt.subplots(figsize=(10, 8))
+    fig, ax = plt.subplots(figsize=(6, 5))
     ax.plot(x, cumsum_pct, 'b-', linewidth=2, label='User Gift Distribution')
     ax.plot([0, 100], [0, 100], 'k--', linewidth=1, label='Perfect Equality')
     ax.fill_between(x, cumsum_pct, x, alpha=0.3)
@@ -367,7 +367,7 @@ def plot_fig5_streamer_lorenz(streamer_gifts, output_path):
     
     gini = compute_gini(amounts)
     
-    fig, ax = plt.subplots(figsize=(10, 8))
+    fig, ax = plt.subplots(figsize=(6, 5))
     ax.plot(x, cumsum_pct, 'r-', linewidth=2, label='Streamer Revenue Distribution')
     ax.plot([0, 100], [0, 100], 'k--', linewidth=1, label='Perfect Equality')
     ax.fill_between(x, cumsum_pct, x, alpha=0.3, color='red')
@@ -390,7 +390,7 @@ def plot_fig5_streamer_lorenz(streamer_gifts, output_path):
 
 def plot_fig6_gifts_per_user(user_gifts, output_path):
     """Fig6: Distribution of gifts per user."""
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(6, 5))
     
     counts = user_gifts['gift_count'].values
     counts_clipped = np.clip(counts, 0, np.percentile(counts, 99))
@@ -414,7 +414,7 @@ def plot_fig6_gifts_per_user(user_gifts, output_path):
 
 def plot_fig7_gifts_per_streamer(streamer_gifts, output_path):
     """Fig7: Distribution of gifts per streamer."""
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(6, 5))
     
     counts = streamer_gifts['gift_count'].values
     counts_clipped = np.clip(counts, 0, np.percentile(counts, 99))
@@ -438,7 +438,7 @@ def plot_fig7_gifts_per_streamer(streamer_gifts, output_path):
 
 def plot_fig8_hourly_pattern(hourly_stats, output_path):
     """Fig8: Hourly gift pattern."""
-    fig, ax1 = plt.subplots(figsize=(12, 6))
+    fig, ax1 = plt.subplots(figsize=(6, 5))
     
     x = hourly_stats['hour'].values
     
@@ -481,7 +481,7 @@ def plot_fig9_interaction_matrix(gift_df, output_path, sample_size=100):
     # Apply log transform for better visualization
     pivot_log = np.log1p(pivot)
     
-    fig, ax = plt.subplots(figsize=(12, 10))
+    fig, ax = plt.subplots(figsize=(6, 5))
     sns.heatmap(pivot_log, cmap='YlOrRd', ax=ax, cbar_kws={'label': 'log(1 + Gift Amount)'})
     ax.set_xlabel('Streamer ID (top 100)')
     ax.set_ylabel('User ID (top 100)')

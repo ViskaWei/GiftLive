@@ -15,16 +15,17 @@
 - **信念4**：密集代理信号(停留、互动)可扶起稀疏打赏信号 → 多任务学习是关键技术路线
 
 **👣 下一步最有价值  [≤2条，直接可进 Roadmap Gate]**
-- 🔴 **P0**：验证两段式 vs 直接回归在KuaiLive上的差异 → If PR-AUC提升>5% then 确认两段式路线 else 考虑端到端
-- 🟡 **P1**：构建Simulator验证凹收益分配机制 → If 总收益+Gini改善 then 推进分配层
+- 🔴 **P0 (MVP-1.1-fair)**：在click全量数据上公平对比两段式 vs 直接回归 → If Top-1%提升≥5% then 确认两段式 else 保留Baseline
+- 🟡 **P1 (MVP-1.2)**：验证延迟反馈建模增益 → If ECE改善≥0.02 then 纳入主模型 else 简单窗口截断
 
 > **权威数字（一行即可）**：User Gini=0.942; Top1% User=59.9% 收益; Matrix Density=0.0064%; **Baseline Top-1%=56.2%, Spearman=0.891**; 条件=KuaiLive
 
 | 模型/方法 | 指标值 | 配置 | 备注 |
 |-----------|--------|------|------|
 | 数据特征 | Gini=0.94, P99/P50=744x | KuaiLive EDA | MVP-0.1 ✅ |
-| Baseline (直接回归) | **Top-1%=56.2%, Spearman=0.891, MAE(log)=0.263** | LightGBM | MVP-0.2 ✅ |
-| 两段式 (p×m) | TODO | GBDT | 待跑 MVP-1.1 |
+| Baseline (直接回归) | **Top-1%=56.2%, Spearman=0.891, MAE(log)=0.263** | LightGBM gift-only | MVP-0.2 ✅ |
+| 两段式 (p×m) | PR-AUC=0.65, ECE=0.018 (Stage1) | LightGBM click | MVP-1.1 ✅ ⚠️不可对比 |
+| 两段式 vs Baseline (公平) | TODO | LightGBM click全量 | 🔴 MVP-1.1-fair |
 | Upper bound | TODO | Oracle | 理论上限 |
 
 ---
@@ -94,6 +95,8 @@ Legend: ✅ 已验证 | ❌ 已否定 | 🔆 进行中 | ⏳ 待验证 | 🗑️
 |---|---|---|---|---|---|
 | I1 | 交互历史决定打赏 | pair_gift_mean 重要性是第二名的3倍 | 打赏行为有强用户-主播绑定 | 优先维护交互特征；冷启动是瓶颈 | MVP-0.2 |
 | I2 | Baseline 已有较高性能 | Top-1%=56.2%远超30%基准 | 直接回归+交互特征已捕捉核心信号 | 两段式需证明显著提升才值得复杂度 | MVP-0.2 |
+| I3 | 模型对比需统一候选集 | MVP-1.1两段式与Baseline在不同数据集训练 | Baseline只看gift-only，Two-Stage看click全量 | 必须在相同候选集上公平对比 | MVP-1.1 |
+| I4 | 分类层和回归层学到不同信号 | Stage1用count特征，Stage2用mean特征 | 是否打赏和打赏多少是不同问题 | 两阶段设计有合理性 | MVP-1.1 |
 
 ---
 
@@ -166,6 +169,9 @@ Legend: ✅ 已验证 | ❌ 已否定 | 🔆 进行中 | ⏳ 待验证 | 🗑️
 | 2026-01-08 | 创建 | 初始化问题树、战略路线 |
 | 2026-01-08 | MVP-0.1 完成 | 确认关键数字: Gini=0.94, Top1%=60%, Density=0.0064%; 验证两段式必要性 |
 | 2026-01-08 | MVP-0.2 完成 | Baseline LightGBM: Top-1%=56.2%, Spearman=0.891; 交互特征主导预测 |
+| 2026-01-08 | MVP-1.1 完成 | 揭示Two-Stage与Baseline在不同数据集，不可直接对比；Stage1分类有效(PR-AUC=0.65) |
+| 2026-01-08 | MVP-1.1-fair 立项 | P0：在click全量上公平对比，关闭DG1 |
+| 2026-01-08 | MVP-1.2 立项 | P1：延迟反馈建模，关闭DG2 |
 
 ---
 

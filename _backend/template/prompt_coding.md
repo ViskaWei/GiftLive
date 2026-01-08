@@ -76,6 +76,9 @@ sweep:
 - 所有文字必须英文
 - 包含 legend、title、axis labels
 - 分辨率 ≥ 300 dpi
+- **figsize 规则（必须遵守）**：
+  - 单张图：`figsize=(6, 5)` 锁死
+  - 多张图（subplot）：按 6:5 比例扩增，如 `(12, 5)` for 1×2, `(12, 10)` for 2×2
 
 ---
 

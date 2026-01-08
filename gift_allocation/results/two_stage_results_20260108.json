@@ -1,0 +1,43 @@
+{
+  "experiment_id": "EXP-20260108-gift-allocation-03",
+  "model": "Two-Stage LightGBM",
+  "timestamp": "2026-01-08T13:59:13.167624",
+  "train_size": 1872509,
+  "val_size": 1701600,
+  "test_size": 1335406,
+  "models": {
+    "baseline": {
+      "top_1pct_capture": 0.562,
+      "top_5pct_capture": 0.763,
+      "top_10pct_capture": 0.823,
+      "spearman": 0.891,
+      "mae_log": 0.263,
+      "ndcg_100": 0.716
+    },
+    "two_stage": {
+      "stage1_pr_auc": 0.646189108045366,
+      "stage1_ece": 0.017906660481107686,
+      "stage1_logloss": 0.05252262662514848,
+      "mae_log": 0.08064666850459126,
+      "rmse_log": 0.41110702115838194,
+      "spearman": 0.24680267798378167,
+      "top_1pct_capture": 0.3581698367530328,
+      "top_5pct_capture": 0.40350456791972444,
+      "top_10pct_capture": 0.2740452298936648,
+      "ndcg_100": 0.37102581157828934
+    }
+  },
+  "comparison": {
+    "delta_top_1pct": -0.20383016324696723,
+    "delta_spearman": -0.6441973220162184,
+    "delta_mae_log": -0.18235333149540875,
+    "conclusion": "reject",
+    "decision_rule": "If Top-1% improves \u2192 accept two-stage"
+  },
+  "training": {
+    "stage1_time_seconds": 135.99121832847595,
+    "stage2_time_seconds": 316.58412981033325,
+    "stage1_best_iteration": 9,
+    "stage2_best_iteration": 105
+  }
+}
