@@ -1,0 +1,49 @@
+{
+  "experiment_id": "EXP-20260108-gift-allocation-06",
+  "mvp": "MVP-1.3",
+  "timestamp": "2026-01-08T17:04:07.322858",
+  "data": {
+    "train_size": 1872509,
+    "val_size": 1701600,
+    "test_size": 1335406,
+    "n_features": 68,
+    "gift_rate": 0.018210860401739058,
+    "comment_rate": 0.04876772287876854
+  },
+  "single_task": {
+    "pr_auc": 0.18212101217322707,
+    "roc_auc": 0.8998490315485144,
+    "ece": 0.11238632201468438,
+    "top_1pct_capture": 0.15306275273326345,
+    "top_5pct_capture": 0.13324846487943687,
+    "top_10pct_capture": 0.1629174779092407,
+    "spearman": 0.18751001478017026
+  },
+  "multi_task": {
+    "pr_auc": 0.1645705336126559,
+    "roc_auc": 0.9047574713696466,
+    "ece": 0.1066165658860863,
+    "top_1pct_capture": 0.11958963606410064,
+    "top_5pct_capture": 0.16422045828965104,
+    "top_10pct_capture": 0.1771828665568369,
+    "spearman": 0.19909606959874396
+  },
+  "delta": {
+    "pr_auc": -0.01755047856057118,
+    "pr_auc_pct_points": -1.755047856057118,
+    "top_1pct": -0.033473116669162806,
+    "top_5pct": 0.03097199341021417
+  },
+  "training": {
+    "single_task_time_seconds": 2389.0372228622437,
+    "single_task_best_epoch": 47,
+    "multi_task_time_seconds": 1112.907542705536,
+    "multi_task_best_epoch": 10,
+    "device": "cuda"
+  },
+  "decision": {
+    "conclusion": "reject",
+    "rule": "If PR-AUC \u0394 \u2265 3 percentage points \u2192 accept multi-task",
+    "dg5_status": "CLOSED"
+  }
+}
