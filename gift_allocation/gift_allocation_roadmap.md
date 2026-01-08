@@ -66,7 +66,7 @@ Gate：Phase 0 - 数据探索 + Baseline建立
 | ✅ | MVP-0.1 | - | ✅ 数据探索完成 |
 | ✅ | MVP-0.2 | - | ✅ Baseline完成 (Top-1%=56.2%) |
 | ✅ | MVP-1.1 | Gate-1 | ✅ 完成 (揭示不可直接对比) |
-| 🔴 | MVP-1.1-fair | Gate-1 | ⏳ 公平对比实验 |
+| ✅ | MVP-1.1-fair | Gate-1 | ✅ Direct Reg 胜出 (Δ=-18.7pp) |
 | 🟡 | MVP-1.2 | Gate-1 | ⏳ 延迟反馈建模 |
 
 ---
@@ -81,7 +81,7 @@ Gate：Phase 0 - 数据探索 + Baseline建立
 | 0.2 | Baseline(直接回归) | 0 | - | ✅ | EXP-20260108-gift-allocation-02 | [exp_baseline_20260108.md](./exp/exp_baseline_20260108.md) |
 | 0.3 | Simulator V1构建 | 0 | - | ⏳ | - | - |
 | 1.1 | 两段式建模 | 1 | Gate-1 | ✅ | EXP-20260108-gift-allocation-03 | [exp_two_stage_20260108.md](./exp/exp_two_stage_20260108.md) |
-| **1.1-fair** | **两段式公平对比** | 1 | Gate-1 | 🔴 | EXP-20260108-gift-allocation-04 | [exp_fair_comparison_20260108.md](./exp/exp_fair_comparison_20260108.md) |
+| **1.1-fair** | **两段式公平对比** | 1 | Gate-1 | ✅ | EXP-20260108-gift-allocation-04 | [exp_fair_comparison_20260108.md](./exp/exp_fair_comparison_20260108.md) |
 | 1.2 | 延迟反馈建模(生存) | 1 | Gate-1 | 🔴 | EXP-20260108-gift-allocation-05 | [exp_delay_modeling_20260108.md](./exp/exp_delay_modeling_20260108.md) |
 | 1.3 | 多任务学习 | 1 | Gate-1 | ⏳ | - | - |
 | 2.1 | 凹收益分配层 | 2 | Gate-2 | ⏳ | - | - |
@@ -225,7 +225,7 @@ Gate：Phase 0 - 数据探索 + Baseline建立
                               MVP-0.1
                               MVP-0.2
                               MVP-1.1
-          MVP-1.1-fair
+                              MVP-1.1-fair
           MVP-1.2
 MVP-0.3
 MVP-1.3
@@ -248,7 +248,8 @@ MVP-3.1
 |-----|------|---------|---------|
 | 0.1 | 打赏金额极端重尾(Gini=0.94)，Top 1%用户贡献60%收益，确认两段式建模必要性 | User Gini=0.942, Streamer Gini=0.930, Matrix Density=0.0064% | ✅ §6.3 |
 | 0.2 | Baseline LightGBM 直接回归表现超预期，Top-1%=56.2%远超30%基准，交互特征主导 | MAE(log)=0.263, Top-1%=56.2%, Spearman=0.891 | ✅ §6.3 |
-| 1.1 | ⚠️ 两段式与Baseline不可直接对比（数据集不同），Stage1分类有效(PR-AUC=0.65) | PR-AUC=0.646, ECE=0.018 | ⏳ |
+| 1.1 | ⚠️ 两段式与Baseline不可直接对比（数据集不同），Stage1分类有效(PR-AUC=0.65) | PR-AUC=0.646, ECE=0.018 | ✅ |
+| **1.1-fair** | ❌ **公平对比：Direct Reg 大幅胜出**，Two-Stage 无优势，DG1 关闭 | Direct Top-1%=54.5%, Two-Stage=35.8%, Δ=-18.7pp | ✅ |
 
 ## 4.4 时间线
 
@@ -260,6 +261,7 @@ MVP-3.1
 | 2026-01-08 | MVP-1.1 完成：两段式建模，揭示与Baseline不可直接对比 |
 | 2026-01-08 | MVP-1.1-fair 立项：公平对比实验 (P0) |
 | 2026-01-08 | MVP-1.2 立项：延迟反馈建模 (P1) |
+| 2026-01-08 | **MVP-1.1-fair 完成**：Direct Reg 胜出 (Top-1%=54.5% vs 35.8%)，DG1 关闭 |
 
 ---
 
@@ -272,7 +274,7 @@ MVP-3.1
 | EXP-20260108-gift-allocation-01 | KuaiLive EDA | ✅ | 0.1 |
 | EXP-20260108-gift-allocation-02 | Baseline LightGBM | ✅ | 0.2 |
 | EXP-20260108-gift-allocation-03 | Two-Stage Model | ✅ | 1.1 |
-| EXP-20260108-gift-allocation-04 | Fair Comparison | 🔴 | 1.1-fair |
+| EXP-20260108-gift-allocation-04 | Fair Comparison | ✅ | 1.1-fair |
 | EXP-20260108-gift-allocation-05 | Delay Modeling | 🟡 | 1.2 |
 
 ## 5.2 数据源

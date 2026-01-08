@@ -1,0 +1,50 @@
+{
+  "experiment_id": "EXP-20260108-gift-allocation-04",
+  "mvp": "MVP-1.1-fair",
+  "timestamp": "2026-01-08T14:25:36.873474",
+  "data": {
+    "train_size": 1872509,
+    "val_size": 1701600,
+    "test_size": 1335406,
+    "base": "click (contains both gift and non-gift samples)"
+  },
+  "models": {
+    "direct_reg": {
+      "mae_log": 0.04443932787820278,
+      "rmse_log": 0.28096803753038296,
+      "spearman": 0.3311018851025714,
+      "top_1pct_capture": 0.5450801258050022,
+      "top_5pct_capture": 0.41434776097049575,
+      "top_10pct_capture": 0.268578703010334,
+      "ndcg_100": 0.2165426277883133
+    },
+    "two_stage": {
+      "mae_log": 0.08064666850459126,
+      "rmse_log": 0.41110702115838194,
+      "spearman": 0.24680267798378167,
+      "top_1pct_capture": 0.3581698367530328,
+      "top_5pct_capture": 0.40350456791972444,
+      "top_10pct_capture": 0.2740452298936648,
+      "ndcg_100": 0.37102581157828934,
+      "stage1_pr_auc": 0.646189108045366,
+      "stage1_ece": 0.017906660481107686,
+      "stage1_logloss": 0.05252262662514848
+    }
+  },
+  "comparison": {
+    "delta_top_1pct": -0.18691028905196938,
+    "delta_top_1pct_pct_points": -18.691028905196937,
+    "delta_top_5pct": -0.010843193050771305,
+    "delta_spearman": -0.08429920711878972,
+    "conclusion": "reject",
+    "decision_rule": "If Top-1% Capture improves >= 5 percentage points \u2192 accept two-stage"
+  },
+  "training": {
+    "direct_reg_time_seconds": 6.3530354499816895,
+    "direct_reg_best_iteration": 162,
+    "two_stage_s1_time_seconds": 3.4146413803100586,
+    "two_stage_s2_time_seconds": 0.9390807151794434,
+    "two_stage_s1_best_iteration": 9,
+    "two_stage_s2_best_iteration": 105
+  }
+}
