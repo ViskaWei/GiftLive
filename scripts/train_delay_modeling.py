@@ -142,12 +142,15 @@ def analyze_delay_distribution(click: pd.DataFrame, gift: pd.DataFrame):
     }
     
     # Relative delay (delay / watch_time)
-    relative_delay = delay_sec / np.maximum(watch_time, 1)
+    # NOTE: watch_time is in milliseconds, delay_sec is in seconds
+    # Convert watch_time to seconds for correct ratio
+    watch_time_sec = watch_time / 1000.0  # ms -> sec
+    relative_delay = delay_sec / np.maximum(watch_time_sec, 1)
     delay_stats["relative_delay_mean"] = float(np.mean(relative_delay))
     delay_stats["relative_delay_p50"] = float(np.median(relative_delay))
-    delay_stats["pct_late_50"] = float(100 * np.mean(relative_delay > 0.5))
-    delay_stats["pct_late_80"] = float(100 * np.mean(relative_delay > 0.8))
-    delay_stats["pct_late_90"] = float(100 * np.mean(relative_delay > 0.9))
+    delay_stats["pct_late_50"] = float(np.mean(relative_delay > 0.5))  # As fraction, not percent
+    delay_stats["pct_late_80"] = float(np.mean(relative_delay > 0.8))
+    delay_stats["pct_late_90"] = float(np.mean(relative_delay > 0.9))
     
     log_message(f"Delay mean: {delay_stats['mean']:.1f}s, median: {delay_stats['median']:.1f}s")
     log_message(f"Delay P90: {delay_stats['p90']:.1f}s, P99: {delay_stats['p99']:.1f}s")

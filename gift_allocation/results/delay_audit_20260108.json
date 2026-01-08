@@ -1,0 +1,65 @@
+{
+  "experiment_id": "EXP-20260108-gift-allocation-13",
+  "mvp": "MVP-1.2-audit",
+  "timestamp": "2026-01-08T16:55:09.477969",
+  "audit_a_matching": {
+    "total_gifts": 72646,
+    "match_0": {
+      "count": 8703,
+      "pct": 0.1198001266415219
+    },
+    "match_1": {
+      "count": 67292,
+      "pct": 0.9263001404069047
+    },
+    "match_2plus": {
+      "count": 195,
+      "pct": 0.0026842496489827383
+    },
+    "conclusion": "Many gifts match multiple clicks"
+  },
+  "audit_b_zero_delay": {
+    "n_valid_pairs": 77824,
+    "delay_eq_zero_count": 67127,
+    "delay_eq_zero_pct": 0.862548828125,
+    "zero_delay_watch_time_p50_ms": 322454.0,
+    "zero_delay_watch_time_p50_sec": 322.454,
+    "zero_delay_watch_time_p90_ms": 2250173.0000000005,
+    "is_reasonable": true,
+    "explanation": "Users with delay=0 have long watch times - they gifted immediately upon entry"
+  },
+  "audit_c_pct_late_definition": {
+    "code_definition": "delay / watch_time > threshold",
+    "pct_late_50_computed": 0.13250411184210525,
+    "pct_late_80_computed": 0.13118061266447367,
+    "pct_late_90_computed": 0.1308079769736842,
+    "pct_late_50_json": 0.688,
+    "pct_late_50_report": "0.7% (likely typo)",
+    "discrepancy": 0.5554958881578946,
+    "correct_interpretation": "68.8% of gifts happen after 50% of watch session elapsed",
+    "is_bug": true,
+    "conclusion": "Discrepancy detected: computed 0.1325 vs JSON 0.6880"
+  },
+  "audit_d_sample_count": {
+    "eda_gift_count": 72646,
+    "delay_sample_count_json": 77824,
+    "merged_all_count": 99722,
+    "valid_pairs_count": 77824,
+    "unique_gifts_in_valid": 68302,
+    "inflation_ratio": 1.1394102661708296,
+    "match_json": true,
+    "reason": "One gift can match multiple clicks (multiple watch sessions in same live)",
+    "is_bug": true,
+    "severity": "Medium - affects delay statistics but not model training directly"
+  },
+  "overall_verdict": {
+    "all_passed": false,
+    "failed_audits": [
+      "A: Gift-Click matching has many 2+ matches",
+      "C: pct_late_* definition mismatch",
+      "D: Sample count inflation"
+    ],
+    "dg2_conclusion_valid": false,
+    "next_step": "Re-analyze delay distribution with corrected methodology"
+  }
+}

@@ -91,12 +91,12 @@ Gate：Phase 0 - 数据探索 + Baseline建立
 | 0.3 | Simulator V1构建 | 0 | - | ✅ | EXP-20260108-gift-allocation-07 | [exp_simulator_v1_20260108.md](./exp/exp_simulator_v1_20260108.md) |
 | 1.1 | 两段式建模 | 1 | Gate-1 | ✅ | EXP-20260108-gift-allocation-03 | [exp_two_stage_20260108.md](./exp/exp_two_stage_20260108.md) |
 | **1.1-fair** | **两段式公平对比** | 1 | Gate-1 | ✅ | EXP-20260108-gift-allocation-04 | [exp_fair_comparison_20260108.md](./exp/exp_fair_comparison_20260108.md) |
-| 1.2 | 延迟反馈建模(生存) | 1 | Gate-1 | ⚠️ | EXP-20260108-gift-allocation-05 | [exp_delay_modeling_20260108.md](./exp/exp_delay_modeling_20260108.md) |
+| 1.2 | 延迟反馈建模(生存) | 1 | Gate-1 | ✅ | EXP-20260108-gift-allocation-05 | [exp_delay_modeling_20260108.md](./exp/exp_delay_modeling_20260108.md) |
 | **1.3** | **多任务学习** | 1 | Gate-1 | ✅ | EXP-20260108-gift-allocation-06 | [exp_multitask_20260108.md](./exp/exp_multitask_20260108.md) |
-| **1.4** | **Two-Stage诊断拆解** | 1 | DG1.1 | 🔴 | EXP-20260108-gift-allocation-11 | [exp_two_stage_diagnosis_20260108.md](./exp/exp_two_stage_diagnosis_20260108.md) |
+| **1.4** | **Two-Stage诊断拆解** | 1 | DG1.1 | ✅ | EXP-20260108-gift-allocation-11 | [exp_two_stage_diagnosis_20260108.md](./exp/exp_two_stage_diagnosis_20260108.md) |
 | **1.5** | **Stage2改进+召回-精排分工** | 1 | DG1.1 | ⏳ | EXP-20260108-gift-allocation-12 | [exp_two_stage_improve_20260108.md](./exp/exp_two_stage_improve_20260108.md) |
-| **1.2-audit** | **延迟数据审计** | 1 | DG2.1 | 🔴 | EXP-20260108-gift-allocation-13 | [exp_delay_audit_20260108.md](./exp/exp_delay_audit_20260108.md) |
-| **1.2-pseudo** | **伪在线截断验证** | 1 | DG2.2 | ⏳ | EXP-20260108-gift-allocation-14 | [exp_delay_pseudo_online_20260108.md](./exp/exp_delay_pseudo_online_20260108.md) |
+| **1.2-audit** | **延迟数据审计** | 1 | DG2.1 | ✅ | EXP-20260108-gift-allocation-13 | [exp_delay_audit_20260108.md](./exp/exp_delay_audit_20260108.md) |
+| ~~1.2-pseudo~~ | ~~伪在线截断验证~~ | 1 | ~~DG2.2~~ | ❌取消 | - | 延迟问题不存在，无需验证 |
 | **2.1** | **凹收益分配层** | 2 | Gate-2 | ✅ | EXP-20260108-gift-allocation-08 | [exp_concave_allocation_20260108.md](./exp/exp_concave_allocation_20260108.md) |
 | **2.2** | **冷启动/公平约束** | 2 | Gate-2 | ✅ | EXP-20260108-gift-allocation-09 | [exp_coldstart_constraint_20260108.md](./exp/exp_coldstart_constraint_20260108.md) |
 | 3.1 | OPE验证(IPS/DR) | 3 | Gate-3 | ⏳ | EXP-20260108-gift-allocation-10 | [exp_ope_validation_20260108.md](./exp/exp_ope_validation_20260108.md) |
@@ -314,11 +314,11 @@ MVP-3.1
 | Gate-3 | MVP-3.1 | ⏳ | - |
 
 ### 子Gate详情
-| Sub-Gate | MVP | 状态 | 通过条件 |
-|----------|-----|------|----------|
-| DG1.1 | MVP-1.4, 1.5 | 🔴 待执行 | 明确Stage2/乘法噪声/OOD哪个主因 |
-| DG2.1 | MVP-1.2-audit | 🔴 待执行 | 样本数/口径一致性审计通过 |
-| DG2.2 | MVP-1.2-pseudo | ⏳ 依赖DG2.1 | 伪在线场景ECE改善≥0.02 |
+| Sub-Gate | MVP | 状态 | 结果 |
+|----------|-----|------|------|
+| DG1.1 | MVP-1.4, 1.5 | ✅ 完成 | 主因是Stage1分类不足，推荐召回-精排分工 |
+| DG2.1 | MVP-1.2-audit | ✅ 通过 | 发现代码bug(单位错误)并修复；pct_late_50=13.3% |
+| ~~DG2.2~~ | ~~MVP-1.2-pseudo~~ | ❌ 取消 | 延迟问题不存在(86.3%立即发生)，无需验证 |
 | DG6 | MVP-0.3(扩展) | ⏳ | Simulator变量控制产出相图 |
 
 ## 4.3 结论快照
@@ -329,10 +329,10 @@ MVP-3.1
 | 0.2 | Baseline LightGBM 直接回归表现超预期，Top-1%=56.2%远超30%基准，交互特征主导 | MAE(log)=0.263, Top-1%=56.2%, Spearman=0.891 | ✅ §6.3 |
 | 1.1 | ⚠️ 两段式与Baseline不可直接对比（数据集不同），Stage1分类有效(PR-AUC=0.65) | PR-AUC=0.646, ECE=0.018 | ✅ |
 | **1.1-fair** | ❌ **公平对比：Direct Reg 大幅胜出**，但Two-Stage在NDCG@100更优(+14.2pp) | Direct Top-1%=54.5%, Two-Stage=35.7%, NDCG: 35.9% vs 21.7% | ✅ |
-| **1.2** | ⚠️ **待审计**：发现样本数不一致(72,646 vs 77,824)、pct_late_*口径矛盾 | 延迟中位数=0s, ECE改善=-0.010(变差), 🚩数据红旗 | ⚠️ |
+| **1.2** | ❌ **DG2关闭**：延迟中位数=0s(86.3%立即发生)，ECE改善=-0.010(变差)；代码bug已修复 | pct_late_50=13.3%, ECE改善=-0.010 | ✅ |
+| **1.2-audit** | ✅ **审计通过**：发现并修复代码bug(单位错误)；样本膨胀1.14x正常 | DG2.1关闭，延迟问题不存在 | ✅ |
 | **0.3** | ✅ **Simulator V1 完成**：Gini误差<5%可校准，金额分布误差大；Greedy策略收益最高(3x Random) | User Gini误差=4.9%, Greedy/Random=2.94x | ✅ §Q3.2 |
-| **1.4** | 🔴 **待执行**：诊断Two-Stage输的主因 (Stage2不足/乘法噪声/OOD) | - | - |
-| **1.2-audit** | 🔴 **待执行**：数据一致性审计，验证DG2结论基础 | - | - |
+| **1.4** | ✅ **诊断完成**：主因=Stage1分类不足，Stage2在gift子集表现好(Spearman=0.89>0.74) | Oracle_p增益+54.9pp，推荐召回-精排分工 | ✅ DG1.1 |
 | **2.1** | ❌ **DG3未通过**：凹收益无显著优势(Δ=-1.17%)，但公平性改善(Gini -0.018) | Concave Exp Δ=-1.17%, Δ Gini=-0.018 | ✅ §DG3 |
 | **2.2** | ✅ **软约束冷启动显著**：探索发现高潜力新主播，同时提升收益(+32%)和成功率(+263%) | Revenue +32%, Success +263%, 决策：采用约束 | ✅ §Q2.3 |
 | **Gate-2** | ✅ **分配层验证完成**：凹收益简化为Greedy；软约束冷启动采用；推荐策略：**Greedy+Soft Cold-Start (λ=0.5)** | - | ✅ §Gate-2 |
@@ -353,7 +353,10 @@ MVP-3.1
 | 2026-01-08 | **问题拆解**：发现数据红旗🚩，DG2暂缓关闭，需先审计 |
 | 2026-01-08 | **新增 DG1.1/DG2.1/DG2.2/DG6**：诊断Two-Stage主因 + 验证延迟数据 + Simulator相图 |
 | 2026-01-08 | **MVP-1.4/1.2-audit 立项 (P0)**：Two-Stage诊断拆解 + 延迟数据审计 |
-| 2026-01-08 | **MVP-1.5/1.2-pseudo 立项 (P1)**：Stage2改进+召回-精排分工 + 伪在线截断验证 |
+| 2026-01-08 | **MVP-1.5 立项 (P1)**：Stage2改进+召回-精排分工 |
+| 2026-01-08 | **MVP-1.4 完成**：Two-Stage诊断，主因=Stage1分类不足，推荐召回-精排分工 |
+| 2026-01-08 | **MVP-1.2-audit 完成**：发现代码bug(单位错误)并修复，pct_late_50=13.3%，DG2.1通过 |
+| 2026-01-08 | **DG2 关闭确认**：审计后确认86.3%礼物立即发生，延迟校正无价值 |
 | 2026-01-08 | **MVP-1.2 完成**：延迟中位数=0s，ECE改善=-0.010(变差)，**DG2关闭** |
 | 2026-01-08 | **MVP-1.3 立项**：多任务学习，用密集信号扶起稀疏打赏，关闭 DG5 |
 | 2026-01-08 | **MVP-1.3 完成**：❌ 多任务未提升，Δ PR-AUC=-1.76pp，**DG5 关闭** |
@@ -375,13 +378,14 @@ MVP-3.1
 | EXP-20260108-gift-allocation-02 | Baseline LightGBM | ✅ | 0.2 |
 | EXP-20260108-gift-allocation-03 | Two-Stage Model | ✅ | 1.1 |
 | EXP-20260108-gift-allocation-04 | Fair Comparison | ✅ | 1.1-fair |
-| EXP-20260108-gift-allocation-05 | Delay Modeling | ⚠️ | 1.2 |
+| EXP-20260108-gift-allocation-05 | Delay Modeling | ✅ | 1.2 |
+| EXP-20260108-gift-allocation-13 | Delay Audit | ✅ | 1.2-audit |
 | EXP-20260108-gift-allocation-06 | Multi-Task Learning | ✅ | 1.3 |
 | EXP-20260108-gift-allocation-07 | Simulator V1 | ✅ | 0.3 |
 | EXP-20260108-gift-allocation-08 | Concave Allocation | ✅ | 2.1 |
 | EXP-20260108-gift-allocation-09 | Coldstart Constraint | ⏳ | 2.2 |
 | EXP-20260108-gift-allocation-10 | OPE Validation | ⏳ | 3.1 |
-| **EXP-20260108-gift-allocation-11** | **Two-Stage Diagnosis** | 🔴 | **1.4** |
+| **EXP-20260108-gift-allocation-11** | **Two-Stage Diagnosis** | ✅ | **1.4** |
 | **EXP-20260108-gift-allocation-12** | **Stage2 Improve + Pipeline** | ⏳ | **1.5** |
 | **EXP-20260108-gift-allocation-13** | **Delay Audit** | 🔴 | **1.2-audit** |
 | **EXP-20260108-gift-allocation-14** | **Delay Pseudo-Online** | ⏳ | **1.2-pseudo** |

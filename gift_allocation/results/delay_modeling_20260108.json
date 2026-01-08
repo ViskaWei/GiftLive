@@ -2,7 +2,7 @@
   "experiment": "delay_modeling",
   "experiment_id": "EXP-20260108-gift-allocation-05",
   "mvp": "MVP-1.2",
-  "timestamp": "2026-01-08T15:44:04.154224",
+  "timestamp": "2026-01-08T17:07:12.630478",
   "delay_stats": {
     "n_samples": 77824,
     "mean": 461.43971220960117,
@@ -14,11 +14,11 @@
     "p95": 3003.099349999992,
     "p99": 8616.58385,
     "max": 134123.964,
-    "relative_delay_mean": 0.012025823890108351,
+    "relative_delay_mean": 12.008423136104614,
     "relative_delay_p50": 0.0,
-    "pct_late_50": 0.6887335526315789,
-    "pct_late_80": 0.1773231907894737,
-    "pct_late_90": 0.07452713815789475
+    "pct_late_50": 0.13250411184210525,
+    "pct_late_80": 0.13118061266447367,
+    "pct_late_90": 0.1308079769736842
   },
   "weibull_params": {
     "shape": 0.9395535547602001,
