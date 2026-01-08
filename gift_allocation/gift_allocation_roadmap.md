@@ -1,6 +1,6 @@
 # 🗺️ Gift Allocation Roadmap
 
-> **Status:** ✅ Phase 0-3 完成 (12/13 MVP) | **Data:** KuaiLive | **Date:** 2026-01-08
+> **Status:** ✅ Phase 0-3 完成 (12/13 MVP) | 📝 Phase 4 立项 (7 MVP) | **Data:** KuaiLive | **Date:** 2026-01-09
 
 ## 📋 MVP 总览
 
@@ -82,10 +82,49 @@
 | EXP-11 | Two-Stage Diagnosis | 1.4 | [exp_two_stage_diagnosis_20260108.md](./exp/exp_two_stage_diagnosis_20260108.md) |
 | EXP-13 | Delay Audit | 1.2-audit | [exp_delay_audit_20260108.md](./exp/exp_delay_audit_20260108.md) |
 
+---
+
+## 🚀 Phase 4: 资源约束与生态健康 (立项中)
+
+> **Status:** 📝 立项 | **Date:** 2026-01-09 | **目标:** 解决真实场景的资源约束问题
+
+### Phase 4 核心命题
+
+Phase 0-3 在**仿真器**中验证了分配策略，但仍缺乏对真实场景的建模：
+1. 主播并发承载上限与拥挤外部性
+2. 鲸鱼（大哥）的互斥分配与分散
+3. 长期生态健康（留存/满意度）
+4. 金额分布的准确校准
+
+### Phase 4 MVP 列表
+
+| MVP | 名称 | 优先级 | 状态 | 验收标准 |
+|-----|------|--------|------|----------|
+| 4.1 | Simulator V2 - 金额校准 | 🔴 P0 | ⏳ | P50/P90误差<30% |
+| 4.2 | Simulator V2 - 并发容量 | 🔴 P0 | ⏳ | 拥挤边际递减可观测 |
+| 4.3 | 召回-精排分工 | 🟡 P1 | ⏳ | Top-1% ≥56% |
+| 4.4 | 供需匹配/影子价格 | 🟡 P1 | ⏳ | 收益+5% vs Greedy |
+| 4.5 | 鲸鱼分散 (b-matching) | 🟢 P2 | ⏳ | 超载率<10% |
+| 4.6 | 不确定性排序 (UCB) | 🟢 P2 | ⏳ | CVaR 改善 |
+| 4.7 | 多目标生态调度 | 🟢 P2 | ⏳ | Pareto 前沿 |
+
+### Phase 4 决策门
+
+| Gate | 条件 | 通过动作 |
+|------|------|----------|
+| Gate-4A | Simulator V2 校准误差<30% | 继续 4.4/4.5 |
+| Gate-4B | 召回-精排 Top-1%≥56% | 采用分工架构 |
+| Gate-4C | 影子价格收益≥+5% | 替换 Greedy |
+
+**详见**: [Phase 4 立项书](./gift_allocation_phase4_charter.md)
+
+---
+
 ## 🔗 导航
 
 | 文件 | 用途 |
 |------|------|
 | [Hub](./gift_allocation_hub.md) | 核心结论、问题树 |
+| [Phase 4 立项](./gift_allocation_phase4_charter.md) | 下一阶段规划 |
 | [exp/](./exp/) | 12个实验报告 |
 | [results/](./results/) | 数值结果JSON |

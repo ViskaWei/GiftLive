@@ -1,6 +1,6 @@
 # 🧠 Gift Allocation Hub
 
-> **Status:** ✅ Phase 0-3 完成 | **Data:** KuaiLive | **Date:** 2026-01-08
+> **Status:** ✅ Phase 0-3 完成 | 📝 Phase 4 立项中 | **Data:** KuaiLive | **Date:** 2026-01-09
 
 ## 🔑 核心结论 (8条)
 
@@ -150,10 +150,27 @@ Legend: ✅ 已验证 | ❌ 已否定 | ⏳ 待验证
 | Phase 3 | 1/1 | 3.1 |
 | **总计** | **12/13** | MVP-1.5 可选 |
 
+## 🚀 Phase 4 预览
+
+> **Status:** 📝 立项中 | **目标:** 解决资源约束的真实建模
+
+| MVP | 名称 | 优先级 | 预期产出 |
+|-----|------|--------|----------|
+| 4.1 | Simulator V2 - 金额校准 | 🔴 P0 | 分位校准误差<30% |
+| 4.2 | Simulator V2 - 并发容量 | 🔴 P0 | 拥挤外部性可观测 |
+| 4.3 | 召回-精排分工 | 🟡 P1 | Top-1% ≥56% |
+| 4.4 | 供需匹配/影子价格 | 🟡 P1 | 收益+5% vs Greedy |
+| 4.5 | 鲸鱼分散 (b-matching) | 🟢 P2 | 超载率<10% |
+| 4.6 | 不确定性排序 (UCB) | 🟢 P2 | CVaR 改善 |
+| 4.7 | 多目标生态调度 | 🟢 P2 | Pareto 前沿 |
+
+**详见**: [Phase 4 立项书](./gift_allocation_phase4_charter.md)
+
 ## 🔗 导航
 
 | 文件 | 用途 |
 |------|------|
 | [Roadmap](./gift_allocation_roadmap.md) | MVP规格、进度追踪 |
+| [Phase 4 立项](./gift_allocation_phase4_charter.md) | 下一阶段规划 |
 | [exp/](./exp/) | 12个实验报告 |
 | [results/](./results/) | 数值结果JSON |
