@@ -1,6 +1,6 @@
 # 🧠 Gift Allocation Hub
 > **ID:** EXP-20260108-gift-allocation-hub | **Status:** 🌱探索 |  
-> **Date:** 2026-01-08 | **Update:** 2026-01-08  
+> **Date:** 2026-01-08 | **Update:** 2026-01-08 ✅  
 
 | # | 💡 共识[抽象洞见] | 证据 | 决策 |
 |---|----------------------------|----------------|------|
@@ -28,7 +28,7 @@
 | 数据特征 | Gini=0.94, P99/P50=744x | KuaiLive EDA | MVP-0.1 ✅ |
 | Baseline (直接回归 gift-only) | Top-1%=56.2%, Spearman=0.891, MAE(log)=0.263 | LightGBM gift-only | MVP-0.2 ✅ |
 | 两段式 (p×m) | PR-AUC=0.65, ECE=0.018 (Stage1) | LightGBM click | MVP-1.1 ✅ ⚠️不可对比 |
-| **Direct Reg (click全量)** | **Top-1%=54.5%, Spearman=0.331** | LightGBM click全量 | ✅ MVP-1.1-fair **胜出** |
+| **Direct Reg (click全量)** | **Top-1%=54.5%, Spearman=0.331, MAE(log)=0.044** | LightGBM click全量 | ✅ MVP-1.1-fair **胜出** |
 | **Two-Stage V2 (click全量)** | Top-1%=35.7%, NDCG@100=0.359, ROC-AUC=0.991 | LightGBM click全量 | ✅ MVP-1.1-fair V2 验证 |
 | 二分类上限 (Y>0) | Top-1%=51.7% | 理论参考 | gift占1.93%，Top-1%最多命中52% |
 | Upper bound | Top-1%=100% | Oracle | 完美预测 |
@@ -129,6 +129,8 @@ Legend: ✅ 已验证 | ❌ 已否定 | 🔆 进行中 | ⏳ 待验证 | 🗑️
 | P1 | 稀疏信号用PR-AUC而非ROC-AUC | ✅ 做 | 打赏预测评估 | 文献共识 |
 | P2 | 金额回归用log(1+Y)变换 | ✅ 做 | 重尾分布 | 文献共识 |
 | P3 | 时间切分避免数据泄漏 | ✅ 做 | 所有离线实验 | 文献共识 |
+| P7 | 高稀疏(>95% Y=0)场景优先直接回归 | ✅ 做 | 打赏/转化预测 | MVP-1.1-fair |
+| P8 | 模型对比需统一数据集/候选集 | ✅ 做 | 所有对比实验 | MVP-1.1 教训 |
 
 ### 6.2 待验证原则
 | # | 原则 | 初步建议 | 需要验证（MVP/Gate） |
@@ -149,15 +151,20 @@ Legend: ✅ 已验证 | ❌ 已否定 | 🔆 进行中 | ⏳ 待验证 | 🗑️
 | Top 1% Streamer贡献 | 53.4% | 收益占比 | MVP-0.1 |
 | Matrix Density | 0.0064% | User-Streamer | MVP-0.1 |
 | Cold Start Streamer | 92.2% | 无打赏主播占比 | MVP-0.1 |
-| **Baseline MAE(log)** | **0.263** | Test set | MVP-0.2 |
-| **Baseline Top-1% Capture** | **56.2%** | Test set | MVP-0.2 |
-| **Baseline Spearman** | **0.891** | Test set | MVP-0.2 |
-| Baseline NDCG@100 | 0.716 | Test set | MVP-0.2 |
+| **Baseline MAE(log)** | **0.263** | gift-only test | MVP-0.2 |
+| **Baseline Top-1% Capture** | **56.2%** | gift-only test | MVP-0.2 |
+| **Baseline Spearman** | **0.891** | gift-only test | MVP-0.2 |
+| Baseline NDCG@100 | 0.716 | gift-only test | MVP-0.2 |
+| **Direct Reg Top-1% (click全量)** | **54.5%** | click全量 1.33M test | MVP-1.1-fair ✅ |
+| Direct Reg Spearman | 0.331 | click全量 | MVP-1.1-fair |
+| Direct Reg MAE(log) | 0.044 | click全量 | MVP-1.1-fair |
+| Two-Stage Top-1% | 35.7% | click全量 | MVP-1.1-fair V2 |
+| Two-Stage NDCG@100 | 0.359 | click全量，精细排序更好 | MVP-1.1-fair V2 |
 
 ### 6.4 已关闭方向（避免重复踩坑）
 | 方向 | 否定证据 | 关闭原因 | 教训 |
 |---|---|---|---|
-| - | - | - | - |
+| 两段式建模 (p×m) | MVP-1.1-fair: Δ Top-1%=-18.8pp | 极度稀疏(98% Y=0)场景下 Stage2 样本量不足(34k vs 1.87M) | 高稀疏场景慎用两阶段；乘法组合放大误差 |
 
 ---
 
