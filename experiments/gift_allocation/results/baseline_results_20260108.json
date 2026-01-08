@@ -1,0 +1,61 @@
+{
+  "model": "LightGBM",
+  "target": "log(1+Y)",
+  "experiment_id": "EXP-20260108-gift-allocation-02",
+  "timestamp": "2026-01-08T13:28:07.630329",
+  "train_size": 25985,
+  "val_size": 24029,
+  "test_size": 22632,
+  "metrics": {
+    "mae_log": 0.262808677916753,
+    "rmse_log": 0.6618568164390453,
+    "spearman": 0.8910774466440259,
+    "top_1pct_capture": 0.5619469026548672,
+    "top_5pct_capture": 0.7630415561450045,
+    "top_10pct_capture": 0.8232434821034026,
+    "ndcg_100": 0.7157362239325965
+  },
+  "top_features": [
+    {
+      "name": "pair_gift_mean",
+      "importance": 328571.12908804417
+    },
+    {
+      "name": "pair_gift_sum",
+      "importance": 102972.63730502129
+    },
+    {
+      "name": "streamer_gift_mean",
+      "importance": 45602.961678504944
+    },
+    {
+      "name": "user_gift_mean",
+      "importance": 18882.38792872429
+    },
+    {
+      "name": "pair_gift_count",
+      "importance": 13530.40712416172
+    },
+    {
+      "name": "streamer_gift_std",
+      "importance": 5910.518400192261
+    },
+    {
+      "name": "streamer_gift_max",
+      "importance": 3593.344786643982
+    },
+    {
+      "name": "hour",
+      "importance": 2087.27372443676
+    },
+    {
+      "name": "day_of_week",
+      "importance": 1654.7194112539291
+    },
+    {
+      "name": "user_gift_std",
+      "importance": 1537.3762352466583
+    }
+  ],
+  "training_time_seconds": 0.9251604080200195
+}

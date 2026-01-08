@@ -18,12 +18,13 @@
 - 🔴 **P0**：验证两段式 vs 直接回归在KuaiLive上的差异 → If PR-AUC提升>5% then 确认两段式路线 else 考虑端到端
 - 🟡 **P1**：构建Simulator验证凹收益分配机制 → If 总收益+Gini改善 then 推进分配层
 
-> **权威数字（一行即可）**：Best=TODO；Baseline=TODO；Δ=TODO；条件=KuaiLive
+> **权威数字（一行即可）**：User Gini=0.942; Top1% User=59.9% 收益; Matrix Density=0.0064%; **Baseline Top-1%=56.2%, Spearman=0.891**; 条件=KuaiLive
 
 | 模型/方法 | 指标值 | 配置 | 备注 |
 |-----------|--------|------|------|
-| Baseline (直接回归) | TODO | GBDT | 待跑 |
-| 两段式 (p×m) | TODO | GBDT | 待跑 |
+| 数据特征 | Gini=0.94, P99/P50=744x | KuaiLive EDA | MVP-0.1 ✅ |
+| Baseline (直接回归) | **Top-1%=56.2%, Spearman=0.891, MAE(log)=0.263** | LightGBM | MVP-0.2 ✅ |
+| 两段式 (p×m) | TODO | GBDT | 待跑 MVP-1.1 |
 | Upper bound | TODO | Oracle | 理论上限 |
 
 ---
@@ -91,7 +92,8 @@ Legend: ✅ 已验证 | ❌ 已否定 | 🔆 进行中 | ⏳ 待验证 | 🗑️
 
 | # | 洞见（标题） | 观察（What） | 解释（Why） | 决策影响（So what） | 证据 |
 |---|---|---|---|---|---|
-| I1 | TODO | TODO | TODO | TODO | TODO |
+| I1 | 交互历史决定打赏 | pair_gift_mean 重要性是第二名的3倍 | 打赏行为有强用户-主播绑定 | 优先维护交互特征；冷启动是瓶颈 | MVP-0.2 |
+| I2 | Baseline 已有较高性能 | Top-1%=56.2%远超30%基准 | 直接回归+交互特征已捕捉核心信号 | 两段式需证明显著提升才值得复杂度 | MVP-0.2 |
 
 ---
 
@@ -127,9 +129,19 @@ Legend: ✅ 已验证 | ❌ 已否定 | 🔆 进行中 | ⏳ 待验证 | 🗑️
 ### 6.3 关键数字速查（只留会反复用到的）
 | 指标 | 值 | 条件 | 来源 |
 |---|---|---|---|
-| KuaiLive打赏率 | TODO | 全量数据 | 数据探索 |
-| 金额P90 | TODO | 打赏样本 | 数据探索 |
-| 金额Gini | TODO | 主播维度 | 数据探索 |
+| KuaiLive打赏率(per-click) | 1.48% | 72,646/4,909,515 | MVP-0.1 |
+| 金额P50/P90/P99 | 2/88/1,488 | 打赏样本 | MVP-0.1 |
+| 金额Mean/Max | 82.7/56,246 | 打赏样本 | MVP-0.1 |
+| User Gini | 0.942 | 用户维度总打赏 | MVP-0.1 |
+| Streamer Gini | 0.930 | 主播维度总收益 | MVP-0.1 |
+| Top 1% User贡献 | 59.9% | 收益占比 | MVP-0.1 |
+| Top 1% Streamer贡献 | 53.4% | 收益占比 | MVP-0.1 |
+| Matrix Density | 0.0064% | User-Streamer | MVP-0.1 |
+| Cold Start Streamer | 92.2% | 无打赏主播占比 | MVP-0.1 |
+| **Baseline MAE(log)** | **0.263** | Test set | MVP-0.2 |
+| **Baseline Top-1% Capture** | **56.2%** | Test set | MVP-0.2 |
+| **Baseline Spearman** | **0.891** | Test set | MVP-0.2 |
+| Baseline NDCG@100 | 0.716 | Test set | MVP-0.2 |
 
 ### 6.4 已关闭方向（避免重复踩坑）
 | 方向 | 否定证据 | 关闭原因 | 教训 |
@@ -152,6 +164,8 @@ Legend: ✅ 已验证 | ❌ 已否定 | 🔆 进行中 | ⏳ 待验证 | 🗑️
 | 日期 | 变更 | 影响 |
 |---|---|---|
 | 2026-01-08 | 创建 | 初始化问题树、战略路线 |
+| 2026-01-08 | MVP-0.1 完成 | 确认关键数字: Gini=0.94, Top1%=60%, Density=0.0064%; 验证两段式必要性 |
+| 2026-01-08 | MVP-0.2 完成 | Baseline LightGBM: Top-1%=56.2%, Spearman=0.891; 交互特征主导预测 |
 
 ---
 

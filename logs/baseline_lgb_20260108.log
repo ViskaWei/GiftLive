@@ -1,0 +1,75 @@
+[13:26:04] 📝 ============================================================
+[13:26:04] 📝 Baseline LightGBM Regression - MVP-0.2
+[13:26:04] 📝 ============================================================
+[13:26:04] 📝 Loading data files...
+[13:26:13] 📝 Gift records: 72,646
+[13:26:13] 📝 Users: 23,772
+[13:26:13] 📝 Streamers: 452,621
+[13:26:13] 📝 Rooms: 11,819,964
+[13:26:13] 📝 Clicks: 4,909,515
+[13:26:13] 📝 Preparing features...
+[13:26:13] 📝 Creating user features...
+[13:26:18] 📝 Creating streamer features...
+[13:27:56] 📝 Creating context features...
+[13:28:00] 📝 Creating interaction features...
+[13:28:03] 📝 Merging all features...
+[13:28:03] 📝 Final dataset: 72,646 records, 76 columns
+[13:28:03] 📝 Performing temporal split...
+[13:28:04] 📝 Date range: 2025-05-04 to 2025-05-25
+[13:28:04] 📝 Train: 2025-05-04 to 2025-05-11
+[13:28:04] 📝 Val: 2025-05-12 to 2025-05-18
+[13:28:04] 📝 Test: 2025-05-19 to 2025-05-25
+[13:28:04] 📝 Train size: 25,985 (35.8%)
+[13:28:04] 📝 Val size: 24,029 (33.1%)
+[13:28:04] 📝 Test size: 22,632 (31.2%)
+[13:28:04] 📝 Number of features: 68
+[13:28:04] 📝 Training LightGBM model...
+Training until validation scores don't improve for 50 rounds
+[50]	train's l1: 0.290788	val's l1: 0.325689
+[100]	train's l1: 0.217798	val's l1: 0.267158
+[150]	train's l1: 0.207915	val's l1: 0.26638
+Early stopping, best iteration is:
+[123]	train's l1: 0.211756	val's l1: 0.265194
+[13:28:04] ✅ Training completed in 0.9s
+[13:28:04] 📝 Best iteration: 123
+[13:28:04] ✅ Model saved to: /home/swei20/GiftLive/experiments/gift_allocation/models/baseline_lgb_20260108.pkl
+[13:28:04] 📝 Evaluating on test set...
+[13:28:05] 📝 MAE(log): 0.2628
+[13:28:05] 📝 RMSE(log): 0.6619
+[13:28:05] 📝 Spearman: 0.8911
+[13:28:05] 📝 Top-1% Capture: 0.5619 (56.2%)
+[13:28:05] 📝 Top-5% Capture: 0.7630
+[13:28:05] 📝 Top-10% Capture: 0.8232
+[13:28:05] 📝 NDCG@100: 0.7157
+[13:28:05] 📝 Generating figures...
+[13:28:05] 📝 Saved: /home/swei20/GiftLive/experiments/gift_allocation/img/baseline_pred_vs_actual.png
+[13:28:06] 📝 Saved: /home/swei20/GiftLive/experiments/gift_allocation/img/baseline_feature_importance.png
+[13:28:06] 📝 Saved: /home/swei20/GiftLive/experiments/gift_allocation/img/baseline_topk_capture.png
+[13:28:07] 📝 Saved: /home/swei20/GiftLive/experiments/gift_allocation/img/baseline_learning_curve.png
+[13:28:07] 📝 Saved: /home/swei20/GiftLive/experiments/gift_allocation/img/baseline_calibration.png
+[13:28:07] ✅ Results saved to: /home/swei20/GiftLive/experiments/gift_allocation/results/baseline_results_20260108.json
+
+============================================================
+📊 EXPERIMENT SUMMARY
+============================================================
+Train/Val/Test: 25,985 / 24,029 / 22,632
+Features: 68
+Training time: 0.9s
+------------------------------------------------------------
+TEST METRICS:
+  MAE(log):        0.2628
+  RMSE(log):       0.6619
+  Spearman:        0.8911
+  Top-1% Capture:  56.2%
+  Top-5% Capture:  76.3%
+  Top-10% Capture: 82.3%
+  NDCG@100:        0.7157
+------------------------------------------------------------
+TOP 5 FEATURES:
+  pair_gift_mean: 328571.1
+  pair_gift_sum: 102972.6
+  streamer_gift_mean: 45603.0
+  user_gift_mean: 18882.4
+  pair_gift_count: 13530.4
+============================================================
+[13:28:07] ✅ Experiment completed!
