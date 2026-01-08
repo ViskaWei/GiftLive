@@ -1,10 +1,13 @@
 # 🗺️ Gift Allocation Roadmap
 > **Name:** 直播打赏预测与金主分配优化 | **ID:** `EXP-20260108-gift-allocation-roadmap`  
-> **Topic:** `gift_allocation` | **Phase:** 0  
-> **Author:** Viska Wei | **Date:** 2026-01-08 | **Status:** 🔄
+> **Topic:** `gift_allocation` | **Phase:** 0-3 ✅  
+> **Author:** Viska Wei | **Date:** 2026-01-08 | **Status:** ✅ 阶段完成
 ```
-💡 当前阶段目标  
-Gate：Phase 0 - 数据探索 + Baseline建立
+💡 阶段成果  
+- Phase 0 ✅: 数据探索 + Baseline + Simulator
+- Phase 1 ✅: 估计层验证 (Direct Reg胜出)
+- Phase 2 ✅: 分配层验证 (Greedy+软约束)
+- Phase 3 ✅: 评估层验证 (SNIPS可用)
 ```
 
 ---
@@ -36,14 +39,17 @@ Gate：Phase 0 - 数据探索 + Baseline建立
 | 项 | 内容 |
 |----|------|
 | 验证 | 两段式建模 + 延迟校正是否显著优于baseline |
-| MVP | MVP-1.1, MVP-1.2, MVP-1.3, **MVP-1.4, MVP-1.5, MVP-1.2-audit, MVP-1.2-pseudo** |
+| MVP | MVP-1.1, MVP-1.2, MVP-1.3, MVP-1.4, MVP-1.2-audit |
 | 若A | PR-AUC提升>5% + ECE改善>0.02 → 确认分层路线 |
 | 若B | 提升不显著 → 考虑端到端或更简单方案 |
-| 状态 | 🔄 进行中 |
-| **子Gate** | **内容** |
-| DG1.1 | Two-Stage诊断：证明Stage2不足/OOD/乘法噪声是主因 → 关闭或转精排 |
-| DG2.1 | 延迟数据审计：样本数/口径一致性 → 确认DG2结论基础 |
-| DG2.2 | 伪在线截断验证：Chapelle在真实延迟场景的价值 |
+| 状态 | ✅ **基本完成** |
+| **结果** | ❌ 两段式不优于直接回归；❌ 延迟校正无效；❌ 多任务无优势 |
+| **子Gate** | **状态** | **结论** |
+| DG1 | ✅ 关闭 | Direct Reg胜出 (Top-1%=54.5% > 35.7%) |
+| DG1.1 | ✅ 关闭 | 主因=Stage1分类不足；Stage2精排有优势 |
+| DG2 | ✅ 关闭 | 延迟不是问题 (86.3%立即发生) |
+| DG2.1 | ✅ 通过 | 代码bug已修复 |
+| DG5 | ✅ 关闭 | 多任务无优势 (Δ=-1.76pp) |
 
 ### Gate-2: 分配层验证
 | 项 | 内容 |
@@ -62,7 +68,8 @@ Gate：Phase 0 - 数据探索 + Baseline建立
 | MVP | MVP-3.1 |
 | 若A | OPE与Simulator结论一致 → OPE可用于线上评估 |
 | 若B | 偏差过大 → 依赖Simulator或小流量A/B |
-| 状态 | ⏳ |
+| 状态 | ✅ **已关闭** |
+| **结果** | **SNIPS最佳：Softmax 0.57%, Concave 4.31%, Greedy 9.97%；探索率≥0.3，日志量≥5000** |
 
 ## 1.3 本周重点
 
@@ -70,13 +77,18 @@ Gate：Phase 0 - 数据探索 + Baseline建立
 |--------|-----|------|------|
 | ✅ | MVP-0.1 | - | ✅ 数据探索完成 |
 | ✅ | MVP-0.2 | - | ✅ Baseline完成 (Top-1%=56.2%) |
+| ✅ | MVP-0.3 | - | ✅ Simulator V1完成 (Gini误差<5%) |
 | ✅ | MVP-1.1 | Gate-1 | ✅ 完成 (揭示不可直接对比) |
 | ✅ | MVP-1.1-fair | Gate-1 | ✅ Direct Reg 胜出 (Δ=-18.7pp) |
-| ⚠️ | MVP-1.2 | Gate-1 | ⚠️ 完成但存在数据红旗，需审计 |
-| 🔴 **P0** | **MVP-1.4** | Gate-1/DG1.1 | 🔴 **Two-Stage诊断拆解** |
-| 🔴 **P0** | **MVP-1.2-audit** | Gate-1/DG2.1 | 🔴 **延迟数据审计** |
-| 🟡 P1 | MVP-1.5 | Gate-1/DG1.1 | 🔴 Stage2改进 + 召回-精排分工 |
-| 🟡 P1 | MVP-1.2-pseudo | Gate-1/DG2.2 | 🔴 伪在线截断验证 |
+| ✅ | MVP-1.2 | Gate-1 | ✅ **DG2关闭**: 延迟不是问题 |
+| ✅ | MVP-1.2-audit | Gate-1/DG2.1 | ✅ 审计通过，代码bug已修复 |
+| ✅ | MVP-1.3 | Gate-1 | ✅ **DG5关闭**: 多任务无优势 |
+| ✅ | MVP-1.4 | Gate-1/DG1.1 | ✅ **DG1.1关闭**: Stage1分类不足是主因 |
+| ✅ | MVP-2.1 | Gate-2 | ✅ **DG3关闭**: 凹收益无显著优势 |
+| ✅ | MVP-2.2 | Gate-2 | ✅ 软约束冷启动 +32%收益 |
+| ✅ | MVP-3.1 | Gate-3 | ✅ **Gate-3关闭**: SNIPS可用 |
+| ❌ | MVP-1.2-pseudo | - | ❌ 取消 (延迟问题不存在) |
+| 🟡 P1 | MVP-1.5 | Gate-1 | ⏳ 召回-精排分工策略 (可选) |
 
 ---
 
@@ -99,7 +111,7 @@ Gate：Phase 0 - 数据探索 + Baseline建立
 | ~~1.2-pseudo~~ | ~~伪在线截断验证~~ | 1 | ~~DG2.2~~ | ❌取消 | - | 延迟问题不存在，无需验证 |
 | **2.1** | **凹收益分配层** | 2 | Gate-2 | ✅ | EXP-20260108-gift-allocation-08 | [exp_concave_allocation_20260108.md](./exp/exp_concave_allocation_20260108.md) |
 | **2.2** | **冷启动/公平约束** | 2 | Gate-2 | ✅ | EXP-20260108-gift-allocation-09 | [exp_coldstart_constraint_20260108.md](./exp/exp_coldstart_constraint_20260108.md) |
-| 3.1 | OPE验证(IPS/DR) | 3 | Gate-3 | ⏳ | EXP-20260108-gift-allocation-10 | [exp_ope_validation_20260108.md](./exp/exp_ope_validation_20260108.md) |
+| **3.1** | **OPE验证(IPS/DR)** | 3 | Gate-3 | ✅ | EXP-20260108-gift-allocation-10 | [exp_ope_validation_20260108.md](./exp/exp_ope_validation_20260108.md) |
 
 **状态**: ⏳计划 | 🔴就绪 | 🚀运行 | ✅完成 | ⚠️需审计 | ❌取消
 
@@ -283,43 +295,47 @@ Gate：Phase 0 - 数据探索 + Baseline建立
 ## 4.1 看板
 
 ```
-⏳计划       🔴就绪P0      🔴就绪P1     🚀运行    ⚠️需审计     ✅完成
-                                                            MVP-0.1
-                                                            MVP-0.2
-                                                            MVP-0.3 ✅
-                                                            MVP-1.1
-                                                            MVP-1.1-fair
-                                                            MVP-2.1 ✅
-                                                            MVP-2.2 ✅
-                                                  MVP-1.2
-             MVP-1.4
-             MVP-1.2-audit
-                          MVP-1.5
-                          MVP-1.2-pseudo
-MVP-3.1
-                                                            MVP-1.3
+⏳计划       🟡待执行      ❌已取消     🚀运行       ✅完成
+                                                     MVP-0.1 ✅
+                                                     MVP-0.2 ✅
+                                                     MVP-0.3 ✅
+                                                     MVP-1.1 ✅
+                                                     MVP-1.1-fair ✅
+                                                     MVP-1.2 ✅
+                                                     MVP-1.2-audit ✅
+                                                     MVP-1.3 ✅
+                                                     MVP-1.4 ✅
+                                                     MVP-2.1 ✅
+                                                     MVP-2.2 ✅
+                                                     MVP-3.1 ✅
+             MVP-1.5       MVP-1.2-pseudo
 ```
 
-### 优先级说明
-- **P0 (立即执行)**: MVP-1.4 诊断拆解, MVP-1.2-audit 数据审计
-- **P1 (依赖P0)**: MVP-1.5 Stage2改进, MVP-1.2-pseudo 伪在线验证
-- **P2 (Simulator)**: MVP-0.3 构建后做变量控制实验
+### 当前状态总结
+- **Phase 0-3 主要实验完成**: 12/13 MVP 已完成
+- **Gate-2 已关闭**: 推荐策略 Greedy + Soft Cold-Start (λ=0.5)
+- **Gate-3 已关闭**: SNIPS 可用于策略离线评估
+- **待定**: MVP-1.5 召回-精排分工（可选优化）
 
 ## 4.2 Gate进度
 
 | Gate | MVP | 状态 | 结果 |
 |------|-----|------|------|
-| Gate-1 | MVP-1.1~1.5, 1.2-audit/pseudo | 🔄 进行中 | ✅ DG1关闭; 🔆 DG1.1诊断中; ⚠️ DG2暂缓; 🔆 DG2.1审计中 |
-| Gate-2 | MVP-2.1,2.2 | ✅ **完成** | 凹收益无优势(Δ=-1.17%)；公平性改善(Gini -0.018)；决策：**Greedy+约束** |
-| Gate-3 | MVP-3.1 | ⏳ | - |
+| Gate-1 | MVP-1.1~1.4, 1.2-audit, 1.3 | ✅ **基本完成** | ❌两段式不优; ❌延迟无效; ❌多任务无优势; ✅Stage2精排有用 |
+| Gate-2 | MVP-2.1, 2.2 | ✅ **完成** | 凹收益无优势(Δ=-1.17%)；软约束+32%收益；决策：**Greedy+软约束** |
+| Gate-3 | MVP-3.1 | ✅ **完成** | SNIPS RelErr<10%；探索率≥0.3；日志量≥5000 |
 
 ### 子Gate详情
 | Sub-Gate | MVP | 状态 | 结果 |
 |----------|-----|------|------|
-| DG1.1 | MVP-1.4, 1.5 | ✅ 完成 | 主因是Stage1分类不足，推荐召回-精排分工 |
+| DG1 | MVP-1.1-fair | ✅ 关闭 | Direct Reg胜出 (54.5% vs 35.7%) |
+| DG1.1 | MVP-1.4 | ✅ 关闭 | 主因是Stage1分类不足；推荐召回-精排分工 |
+| DG2 | MVP-1.2 | ✅ 关闭 | 延迟不是问题 (86.3%立即发生) |
 | DG2.1 | MVP-1.2-audit | ✅ 通过 | 发现代码bug(单位错误)并修复；pct_late_50=13.3% |
-| ~~DG2.2~~ | ~~MVP-1.2-pseudo~~ | ❌ 取消 | 延迟问题不存在(86.3%立即发生)，无需验证 |
-| DG6 | MVP-0.3(扩展) | ⏳ | Simulator变量控制产出相图 |
+| ~~DG2.2~~ | ~~MVP-1.2-pseudo~~ | ❌ 取消 | 延迟问题不存在，无需验证 |
+| DG3 | MVP-2.1 | ✅ 关闭 | 凹收益Δ=-1.17%无显著优势 |
+| DG5 | MVP-1.3 | ✅ 关闭 | 多任务无优势 (Δ=-1.76pp) |
+| DG7 | MVP-2.2 | ✅ 验证 | 软约束λ=0.5有效 |
 
 ## 4.3 结论快照
 
@@ -337,6 +353,7 @@ MVP-3.1
 | **2.2** | ✅ **软约束冷启动显著**：探索发现高潜力新主播，同时提升收益(+32%)和成功率(+263%) | Revenue +32%, Success +263%, 决策：采用约束 | ✅ §Q2.3 |
 | **Gate-2** | ✅ **分配层验证完成**：凹收益简化为Greedy；软约束冷启动采用；推荐策略：**Greedy+Soft Cold-Start (λ=0.5)** | - | ✅ §Gate-2 |
 | **1.3** | ❌ **多任务学习无优势**：密集信号(watch/comment)未能提升稀疏打赏预测，DG5关闭 | Multi PR-AUC=0.165 < Single=0.182 (Δ=-1.76pp) | ✅ §DG5 |
+| **3.1** | ✅ **OPE验证完成**：SNIPS最佳，RelErr<10%；Gate-3关闭 | SNIPS: Softmax 0.57%, Concave 4.31%, Greedy 9.97% | ✅ §Gate-3 |
 
 ## 4.4 时间线
 
@@ -365,6 +382,8 @@ MVP-3.1
 | 2026-01-08 | **MVP-2.1 完成**：凹收益Δ=-1.17%无显著优势，公平性改善(Gini -0.018)，DG3未通过 |
 | 2026-01-08 | **MVP-2.2 完成**：软约束冷启动 +32%收益 +263%成功率，决策：采用约束 |
 | 2026-01-08 | **Gate-2 关闭**：分配层验证完成，推荐策略 Greedy+Soft Cold-Start (λ=0.5) |
+| 2026-01-08 | **MVP-3.1 完成**：OPE验证，SNIPS RelErr<10%，Gate-3 关闭 |
+| 2026-01-08 | **阶段总结**：12/13 MVP完成，Gate-1基本完成、Gate-2/3已关闭 |
 
 ---
 
@@ -383,8 +402,8 @@ MVP-3.1
 | EXP-20260108-gift-allocation-06 | Multi-Task Learning | ✅ | 1.3 |
 | EXP-20260108-gift-allocation-07 | Simulator V1 | ✅ | 0.3 |
 | EXP-20260108-gift-allocation-08 | Concave Allocation | ✅ | 2.1 |
-| EXP-20260108-gift-allocation-09 | Coldstart Constraint | ⏳ | 2.2 |
-| EXP-20260108-gift-allocation-10 | OPE Validation | ⏳ | 3.1 |
+| EXP-20260108-gift-allocation-09 | Coldstart Constraint | ✅ | 2.2 |
+| EXP-20260108-gift-allocation-10 | OPE Validation | ✅ | 3.1 |
 | **EXP-20260108-gift-allocation-11** | **Two-Stage Diagnosis** | ✅ | **1.4** |
 | **EXP-20260108-gift-allocation-12** | **Stage2 Improve + Pipeline** | ⏳ | **1.5** |
 | **EXP-20260108-gift-allocation-13** | **Delay Audit** | 🔴 | **1.2-audit** |
@@ -413,19 +432,30 @@ MVP-3.1
 
 ## 6.1 数值汇总
 
-| MVP | 配置 | PR-AUC | Top-1%捕获 | Spearman | NDCG@100 | MAE(log) |
-|-----|------|--------|-----------|----------|----------|----------|
-| 0.1 | KuaiLive EDA | - | - | - | - | Gini=0.94 |
-| 0.2 | Baseline LightGBM (gift-only) | - | 56.2% | 0.891 | 0.716 | 0.263 |
-| 1.1 | Two-Stage (click全量) | 0.646 (S1) | ⚠️不可对比 | - | - | - |
-| **1.1-fair** | **Direct Reg (click全量)** | - | **54.5%** | **0.331** | 0.217 | **0.044** |
-| 1.1-fair | Two-Stage V2 (click全量) | 0.991 (S1) | 35.7% | 0.246 | 0.359 | 0.081 |
-| **1.2** | **Baseline (binary)** | **0.651** | - | - | - | ECE=**0.018** |
-| 1.2 | Chapelle (weighted) | 0.692 | - | - | - | ECE=0.028 ❌ |
+| MVP | 配置 | PR-AUC | Top-1%捕获 | Spearman | NDCG@100 | 其他关键指标 |
+|-----|------|--------|-----------|----------|----------|-------------|
+| 0.1 | KuaiLive EDA | - | - | - | - | Gini=0.94, 密度=0.0064% |
+| 0.2 | Baseline LightGBM (gift-only) | - | 56.2% | 0.891 | 0.716 | MAE(log)=0.263 |
+| 0.3 | Simulator V1 | - | - | - | - | Gini误差<5%, Greedy/Random=3x |
+| 1.1 | Two-Stage (click全量) | 0.646 (S1) | ⚠️不可对比 | - | - | ECE=0.018 |
+| **1.1-fair** | **Direct Reg (click全量)** | - | **54.5%** | 0.331 | 0.217 | MAE(log)=0.044 |
+| 1.1-fair | Two-Stage V2 (click全量) | 0.991 (S1) | 35.7% | 0.246 | **0.359** | NDCG更优+14.2pp |
+| **1.2** | Delay Baseline | 0.651 | - | - | - | ECE=0.018 ✅ |
+| 1.2 | Chapelle (weighted) | 0.692 | - | - | - | ECE=0.028 ❌变差 |
+| **1.3** | Single-Task MLP | **0.182** | 15.3% | 0.188 | - | 多任务无优势 |
+| 1.3 | Multi-Task MLP | 0.165 | 12.0% | 0.199 | - | Δ=-1.76pp |
+| **1.4** | Stage1-only | - | 34.3% | 0.585 | - | Oracle_p增益+54.9pp |
+| 1.4 | Stage2 gift子集 | - | - | **0.892** | - | 精排优势明显 |
+| **2.1** | Greedy分配 | - | - | - | - | Revenue=254,752 |
+| 2.1 | Concave_exp | - | - | - | - | Δ=-1.17%, Gini改善-0.018 |
+| **2.2** | Soft Cold-Start | - | - | - | - | Revenue+32%, Success+263% |
+| **3.1** | SNIPS (Softmax) | - | - | - | - | RelErr=0.57% ✅ |
+| 3.1 | SNIPS (Greedy) | - | - | - | - | RelErr=9.97% |
 
-> **结论**: 
-> - Direct Regression 在 Top-1% Capture 上胜出 (+18.8pp)，但 Two-Stage 在 NDCG@100 上更优 (+14.2pp)
-> - 延迟中位数=0s，Chapelle方法ECE变差(-0.010)，DG2关闭
+> **核心结论**: 
+> - **估计层**: Direct Regression 胜出；Two-Stage 适合精排；延迟/多任务无效
+> - **分配层**: Greedy + 软约束冷启动最优 (λ=0.5)
+> - **评估层**: SNIPS 可用于策略离线对比 (RelErr<10%)
 
 ## 6.2 Simulator参数参考
 
@@ -485,6 +515,9 @@ watch_duration:
 | 2026-01-08 | **批量生成 Coding Prompt**: MVP-0.3, 2.1, 2.2, 3.1 | §2.1, §4.1, §5.1 |
 | 2026-01-08 | **MVP-0.3 完成**：Simulator V1，Gini误差<5%，Greedy策略收益3x | §2.1, §4.3, §5.1 |
 | 2026-01-08 | **问题拆解+新假设**: 添加H1-H4/DG1.1/DG2.1/DG2.2/DG6, 发现数据红旗 | §1.2, §2.1, §3, §4, §5.1 |
-| 2026-01-08 | **MVP-1.4 立项**: Two-Stage诊断拆解 (P0) | §2.1, §3, §5.1 |
-| 2026-01-08 | **MVP-1.2-audit 立项**: 延迟数据审计 (P0) | §2.1, §3, §5.1 |
-| 2026-01-08 | **MVP-1.5, 1.2-pseudo 立项**: Stage2改进+伪在线验证 (P1) | §2.1, §3, §5.1 |
+| 2026-01-08 | **MVP-1.4 完成**: Two-Stage诊断，主因=Stage1分类不足 | §2.1, §4.3, §5.1 |
+| 2026-01-08 | **MVP-1.2-audit 完成**: 发现代码bug并修复，DG2.1通过 | §2.1, §4.3, §5.1 |
+| 2026-01-08 | **MVP-2.1 完成**: 凹收益Δ=-1.17%，公平性改善 | §2.1, §4.3 |
+| 2026-01-08 | **MVP-2.2 完成**: 软约束+32%收益，Gate-2关闭 | §2.1, §4.3 |
+| 2026-01-08 | **MVP-3.1 完成**: SNIPS RelErr<10%，Gate-3关闭 | §2.1, §4.3 |
+| 2026-01-08 | **整合更新**: 12/13 MVP完成，Phase 0-3 阶段完成 | 全部 |
