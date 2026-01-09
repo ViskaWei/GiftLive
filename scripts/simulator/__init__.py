@@ -28,6 +28,20 @@ from .policies import (
     create_policy,
 )
 
+from .policies_shadow_price import (
+    Constraint,
+    CapacityConstraint,
+    ColdStartConstraint,
+    HeadCapConstraint,
+    WhaleSpreadConstraint,
+    FrequencyConstraint,
+    ShadowPriceConfig,
+    ShadowPriceAllocator,
+    GreedyWithRulesPolicy,
+    evaluate_constraint_satisfaction,
+    run_shadow_price_simulation,
+)
+
 __all__ = [
     # Config
     'SimConfig',
@@ -55,4 +69,16 @@ __all__ = [
     'ColdStartTracker',
     # Factory
     'create_policy',
+    # Shadow Price (MVP-5.2)
+    'Constraint',
+    'CapacityConstraint',
+    'ColdStartConstraint',
+    'HeadCapConstraint',
+    'WhaleSpreadConstraint',
+    'FrequencyConstraint',
+    'ShadowPriceConfig',
+    'ShadowPriceAllocator',
+    'GreedyWithRulesPolicy',
+    'evaluate_constraint_satisfaction',
+    'run_shadow_price_simulation',
 ]
