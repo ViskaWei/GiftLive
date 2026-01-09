@@ -651,6 +651,304 @@ def plot_mvp41_figures(results: Dict):
 
 
 # ============================================================
+# MVP-4.2: Simulator V2 Concurrency Capacity
+# ============================================================
+
+def run_mvp42_concurrency(n_simulations: int = 50, verbose: bool = True):
+    """Run MVP-4.2: Concurrency capacity experiment.
+    
+    Test whether revenue shows diminishing returns with increased concurrency.
+    """
+    print("\n" + "="*60)
+    print("MVP-4.2: Concurrency Capacity Modeling")
+    print("="*60)
+    
+    # Base config (use V2+ for calibrated amount distribution)
+    base_config = {
+        'n_users': 10000,
+        'n_streamers': 500,
+        'wealth_lognormal_mean': 2.5,
+        'wealth_lognormal_std': 1.2,
+        'wealth_pareto_alpha': 1.3,
+        'wealth_pareto_min': 80,
+        'wealth_pareto_weight': 0.05,
+        'gift_theta0': -6.5,
+        'gift_theta1': 0.4,
+        'gift_theta2': 0.8,
+        'gift_theta3': 0.2,
+        'gift_theta4': -0.05,
+        'amount_version': 3,  # Use V2+ discrete tiers
+        'gamma': 0.02,
+    }
+    
+    # Test with and without capacity
+    results = {}
+    
+    # 1. Baseline: No capacity constraints
+    print(f"\nRunning baseline (no capacity)...")
+    baseline_results = []
+    for i in tqdm(range(n_simulations), desc="  No capacity"):
+        config = SimConfig(**base_config, enable_capacity=False, seed=42 + i)
+        sim = GiftLiveSimulator(config)
+        policy = GreedyPolicy()
+        metrics = sim.run_simulation(policy, n_rounds=50, users_per_round=200)
+        baseline_results.append(metrics)
+    
+    results['no_capacity'] = {
+        'revenue': {'mean': np.mean([r['total_revenue'] for r in baseline_results]),
+                   'std': np.std([r['total_revenue'] for r in baseline_results])},
+        'gift_rate': {'mean': np.mean([r['gift_rate'] for r in baseline_results])},
+        'gini': {'mean': np.mean([r['streamer_gini'] for r in baseline_results])},
+    }
+    
+    # 2. With capacity constraints - sweep penalty strength
+    penalty_values = [0.1, 0.3, 0.5, 0.7, 1.0]
+    
+    for alpha in penalty_values:
+        print(f"\nRunning with capacity (alpha={alpha})...")
+        cap_results = []
+        for i in tqdm(range(n_simulations), desc=f"  alpha={alpha}"):
+            config = SimConfig(
+                **base_config,
+                enable_capacity=True,
+                capacity_top10=100,
+                capacity_middle=50,
+                capacity_tail=20,
+                crowding_penalty_alpha=alpha,
+                seed=42 + i
+            )
+            sim = GiftLiveSimulator(config)
+            policy = GreedyPolicy()
+            metrics = sim.run_simulation(policy, n_rounds=50, users_per_round=200)
+            cap_results.append(metrics)
+        
+        results[f'cap_alpha_{alpha}'] = {
+            'alpha': alpha,
+            'revenue': {'mean': np.mean([r['total_revenue'] for r in cap_results]),
+                       'std': np.std([r['total_revenue'] for r in cap_results])},
+            'gift_rate': {'mean': np.mean([r['gift_rate'] for r in cap_results])},
+            'gini': {'mean': np.mean([r['streamer_gini'] for r in cap_results])},
+            'overcrowd_rate': {'mean': np.mean([r.get('overcrowd_rate', 0) for r in cap_results])},
+            'avg_concurrent': {'mean': np.mean([r.get('avg_concurrent', 0) for r in cap_results])},
+            'avg_amount_overcrowded': {'mean': np.mean([r.get('avg_amount_overcrowded', 0) for r in cap_results])},
+            'avg_amount_normal': {'mean': np.mean([r.get('avg_amount_normal', 0) for r in cap_results])},
+        }
+    
+    # 3. Concurrency sweep (vary users_per_round to simulate different load)
+    print("\nRunning concurrency sweep...")
+    users_per_round_values = [50, 100, 200, 400, 800]
+    concurrency_sweep = {}
+    
+    for upr in users_per_round_values:
+        results_no_cap = []
+        results_with_cap = []
+        
+        for i in tqdm(range(30), desc=f"  users_per_round={upr}"):
+            # Without capacity
+            config = SimConfig(**base_config, enable_capacity=False, seed=42 + i)
+            sim = GiftLiveSimulator(config)
+            policy = GreedyPolicy()
+            metrics = sim.run_simulation(policy, n_rounds=50, users_per_round=upr)
+            results_no_cap.append(metrics)
+            
+            # With capacity
+            config = SimConfig(
+                **base_config,
+                enable_capacity=True,
+                capacity_top10=100,
+                capacity_middle=50,
+                capacity_tail=20,
+                crowding_penalty_alpha=0.5,
+                seed=42 + i
+            )
+            sim = GiftLiveSimulator(config)
+            policy = GreedyPolicy()
+            metrics = sim.run_simulation(policy, n_rounds=50, users_per_round=upr)
+            results_with_cap.append(metrics)
+        
+        concurrency_sweep[upr] = {
+            'no_cap_revenue': np.mean([r['total_revenue'] for r in results_no_cap]),
+            'with_cap_revenue': np.mean([r['total_revenue'] for r in results_with_cap]),
+            'overcrowd_rate': np.mean([r.get('overcrowd_rate', 0) for r in results_with_cap]),
+            'avg_amount_overcrowded': np.mean([r.get('avg_amount_overcrowded', 0) for r in results_with_cap]),
+            'avg_amount_normal': np.mean([r.get('avg_amount_normal', 0) for r in results_with_cap]),
+        }
+    
+    results['concurrency_sweep'] = concurrency_sweep
+    
+    # Analyze results
+    print("\n--- Results Summary ---")
+    print(f"Baseline (no capacity): Revenue = {results['no_capacity']['revenue']['mean']:.0f}")
+    
+    for alpha in penalty_values:
+        key = f'cap_alpha_{alpha}'
+        rev = results[key]['revenue']['mean']
+        delta = (rev - results['no_capacity']['revenue']['mean']) / results['no_capacity']['revenue']['mean'] * 100
+        overcrowd = results[key].get('overcrowd_rate', {}).get('mean', 0) * 100
+        print(f"  alpha={alpha}: Revenue={rev:.0f} (Δ={delta:+.1f}%), Overcrowd={overcrowd:.1f}%")
+    
+    # Check if diminishing returns are observable
+    print("\n--- Diminishing Returns Test ---")
+    for upr in users_per_round_values:
+        no_cap = concurrency_sweep[upr]['no_cap_revenue']
+        with_cap = concurrency_sweep[upr]['with_cap_revenue']
+        overcrowd = concurrency_sweep[upr]['overcrowd_rate'] * 100
+        avg_overcrowded = concurrency_sweep[upr]['avg_amount_overcrowded']
+        avg_normal = concurrency_sweep[upr]['avg_amount_normal']
+        
+        if avg_normal > 0:
+            penalty_ratio = avg_overcrowded / avg_normal
+        else:
+            penalty_ratio = 1.0
+        
+        print(f"  users_per_round={upr}: Overcrowd={overcrowd:.1f}%, Penalty Ratio={penalty_ratio:.2f}")
+    
+    # Gate-4B decision
+    # Check if diminishing returns are observable at high concurrency
+    high_concurrency = concurrency_sweep[800]
+    if high_concurrency['overcrowd_rate'] > 0.1 and high_concurrency['avg_amount_overcrowded'] < high_concurrency['avg_amount_normal']:
+        gate4b = "PASS"
+        decision = "Diminishing returns observable, proceed to MVP-4.4"
+    else:
+        gate4b = "PARTIAL"
+        decision = "Effect observed but weak, may need stronger penalty or higher load"
+    
+    print(f"\n=== Gate-4B: {gate4b} ===")
+    print(f"    Decision: {decision}")
+    
+    final_results = {
+        'penalty_sweep': results,
+        'concurrency_sweep': concurrency_sweep,
+        'gate4b': gate4b,
+        'decision': decision,
+    }
+    
+    return final_results
+
+
+def plot_mvp42_figures(results: Dict):
+    """Generate MVP-4.2 figures."""
+    print("\nGenerating MVP-4.2 figures...")
+    
+    penalty_sweep = results['penalty_sweep']
+    concurrency_sweep = results['concurrency_sweep']
+    
+    # Fig1: Revenue by penalty strength
+    fig, ax = plt.subplots(figsize=(6, 5))
+    
+    alphas = []
+    revenues = []
+    overcrowds = []
+    
+    # Add baseline
+    alphas.append(0)
+    revenues.append(penalty_sweep['no_capacity']['revenue']['mean'])
+    overcrowds.append(0)
+    
+    for key in penalty_sweep:
+        if key.startswith('cap_alpha_'):
+            alpha = penalty_sweep[key]['alpha']
+            rev = penalty_sweep[key]['revenue']['mean']
+            overcrowd = penalty_sweep[key].get('overcrowd_rate', {}).get('mean', 0)
+            alphas.append(alpha)
+            revenues.append(rev)
+            overcrowds.append(overcrowd)
+    
+    ax.bar(range(len(alphas)), revenues, color='steelblue')
+    ax.set_xticks(range(len(alphas)))
+    ax.set_xticklabels(['No Cap'] + [f'α={a}' for a in alphas[1:]])
+    ax.set_ylabel('Total Revenue')
+    ax.set_title('Revenue by Capacity Penalty Strength')
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / 'mvp42_penalty_sweep.png')
+    plt.close()
+    print(f"  Saved: mvp42_penalty_sweep.png")
+    
+    # Fig2: Concurrency sweep - diminishing returns
+    fig, ax = plt.subplots(figsize=(6, 5))
+    
+    uprs = sorted(concurrency_sweep.keys())
+    no_cap_revs = [concurrency_sweep[u]['no_cap_revenue'] for u in uprs]
+    with_cap_revs = [concurrency_sweep[u]['with_cap_revenue'] for u in uprs]
+    
+    ax.plot(uprs, no_cap_revs, 'o-', label='No Capacity Limit', linewidth=2, markersize=8)
+    ax.plot(uprs, with_cap_revs, 's--', label='With Capacity (α=0.5)', linewidth=2, markersize=8)
+    ax.set_xlabel('Users per Round (Concurrency)')
+    ax.set_ylabel('Total Revenue')
+    ax.set_title('Revenue vs Concurrency Load')
+    ax.legend()
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / 'mvp42_concurrency_sweep.png')
+    plt.close()
+    print(f"  Saved: mvp42_concurrency_sweep.png")
+    
+    # Fig3: Overcrowd rate vs concurrency
+    fig, ax = plt.subplots(figsize=(6, 5))
+    
+    overcrowd_rates = [concurrency_sweep[u]['overcrowd_rate'] * 100 for u in uprs]
+    ax.bar(range(len(uprs)), overcrowd_rates, color='coral')
+    ax.set_xticks(range(len(uprs)))
+    ax.set_xticklabels([str(u) for u in uprs])
+    ax.set_xlabel('Users per Round')
+    ax.set_ylabel('Overcrowd Rate (%)')
+    ax.set_title('Streamer Overcrowding by Load')
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / 'mvp42_overcrowd_rate.png')
+    plt.close()
+    print(f"  Saved: mvp42_overcrowd_rate.png")
+    
+    # Fig4: Amount penalty effect
+    fig, ax = plt.subplots(figsize=(6, 5))
+    
+    avg_normal = [concurrency_sweep[u]['avg_amount_normal'] for u in uprs]
+    avg_overcrowded = [concurrency_sweep[u]['avg_amount_overcrowded'] for u in uprs]
+    
+    x = np.arange(len(uprs))
+    width = 0.35
+    
+    bars1 = ax.bar(x - width/2, avg_normal, width, label='Normal', color='steelblue')
+    bars2 = ax.bar(x + width/2, avg_overcrowded, width, label='Overcrowded', color='coral')
+    
+    ax.set_xticks(x)
+    ax.set_xticklabels([str(u) for u in uprs])
+    ax.set_xlabel('Users per Round')
+    ax.set_ylabel('Average Gift Amount')
+    ax.set_title('Gift Amount: Normal vs Overcrowded')
+    ax.legend()
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / 'mvp42_amount_comparison.png')
+    plt.close()
+    print(f"  Saved: mvp42_amount_comparison.png")
+    
+    # Fig5: Gate-4B summary
+    fig, ax = plt.subplots(figsize=(6, 5))
+    
+    # Show diminishing returns ratio at different concurrency levels
+    penalty_ratios = []
+    for u in uprs:
+        normal = concurrency_sweep[u]['avg_amount_normal']
+        overcrowded = concurrency_sweep[u]['avg_amount_overcrowded']
+        if normal > 0:
+            penalty_ratios.append(overcrowded / normal)
+        else:
+            penalty_ratios.append(1.0)
+    
+    colors = ['green' if r < 1.0 else 'red' for r in penalty_ratios]
+    ax.bar(range(len(uprs)), penalty_ratios, color=colors)
+    ax.axhline(1.0, color='gray', linestyle='--', label='No Penalty')
+    ax.set_xticks(range(len(uprs)))
+    ax.set_xticklabels([str(u) for u in uprs])
+    ax.set_xlabel('Users per Round')
+    ax.set_ylabel('Penalty Ratio (Overcrowded / Normal)')
+    ax.set_title(f'Diminishing Returns Effect (Gate-4B: {results["gate4b"]})')
+    ax.legend()
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / 'mvp42_gate4b_summary.png')
+    plt.close()
+    print(f"  Saved: mvp42_gate4b_summary.png")
+
+
+# ============================================================
 # MVP-2.1: Concave Allocation
 # ============================================================
 
@@ -1354,12 +1652,302 @@ def plot_mvp22_figures(results: Dict):
 
 
 # ============================================================
+# MVP-4.2: Concurrency Capacity Modeling
+# ============================================================
+
+def run_mvp42_concurrency(n_simulations: int = 50, verbose: bool = True):
+    """Run MVP-4.2: Concurrency capacity modeling experiments."""
+    print("\n" + "="*60)
+    print("MVP-4.2: Concurrency Capacity Modeling")
+    print("="*60)
+    
+    # Base config with V2+ amount model
+    base_config = {
+        'n_users': 10000,
+        'n_streamers': 100,  # Smaller for faster experiments
+        'amount_version': 3,  # V2+ discrete tiers
+        'wealth_lognormal_mean': 2.5,
+        'wealth_lognormal_std': 1.2,
+        'wealth_pareto_alpha': 1.3,
+        'wealth_pareto_min': 80,
+        'wealth_pareto_weight': 0.05,
+        'gift_theta0': -6.5,
+        'gift_theta1': 0.4,
+        'gift_theta2': 0.8,
+        'gift_theta3': 0.2,
+        'gift_theta4': -0.05,
+        'gamma': 0.02,
+    }
+    
+    results = {}
+    
+    # Experiment 1: Baseline Comparison (with/without capacity)
+    print("\n[Exp 1] Baseline Comparison (capacity on/off)...")
+    baseline_results = {}
+    
+    # Use LOW capacity to trigger overcrowding
+    # With 100 streamers: top 10 = 10 streamers
+    # With capacity_top10=15, total top capacity = 150
+    # With 200 users per round, many will overflow
+    for enable_cap, name in [(False, 'no_capacity'), (True, 'with_capacity')]:
+        exp_results = []
+        for i in tqdm(range(n_simulations), desc=f"  {name}"):
+            config = SimConfig(
+                **base_config,
+                enable_capacity=enable_cap,
+                capacity_top10=15,   # Low capacity to trigger overcrowding
+                capacity_middle=8,
+                capacity_tail=3,
+                crowding_penalty_alpha=0.5,
+                seed=42 + i
+            )
+            sim = GiftLiveSimulator(config)
+            policy = GreedyPolicy()
+            metrics = sim.run_simulation(policy, n_rounds=50, users_per_round=200)
+            exp_results.append(metrics)
+        
+        baseline_results[name] = {
+            'revenue': {'mean': np.mean([r['total_revenue'] for r in exp_results]),
+                       'std': np.std([r['total_revenue'] for r in exp_results])},
+            'gini': {'mean': np.mean([r['streamer_gini'] for r in exp_results]),
+                    'std': np.std([r['streamer_gini'] for r in exp_results])},
+            'top_10_share': {'mean': np.mean([r['top_10_streamer_share'] for r in exp_results]),
+                            'std': np.std([r['top_10_streamer_share'] for r in exp_results])},
+        }
+        
+        if verbose:
+            print(f"    {name}: Revenue={baseline_results[name]['revenue']['mean']:.0f}, "
+                  f"Gini={baseline_results[name]['gini']['mean']:.3f}")
+    
+    results['baseline_comparison'] = baseline_results
+    
+    # Experiment 2: Concurrency Sweep
+    print("\n[Exp 2] Concurrency Sweep (users_per_round)...")
+    concurrency_sweep = {}
+    users_per_round_values = [50, 100, 200, 400, 800]
+    
+    for upr in tqdm(users_per_round_values, desc="  Sweep"):
+        exp_results = []
+        overcrowded_counts = []
+        for i in range(n_simulations):
+            config = SimConfig(
+                **base_config,
+                enable_capacity=True,
+                capacity_top10=15,
+                capacity_middle=8,
+                capacity_tail=3,
+                crowding_penalty_alpha=0.5,
+                seed=42 + i
+            )
+            sim = GiftLiveSimulator(config)
+            policy = GreedyPolicy()
+            metrics = sim.run_simulation(policy, n_rounds=50, users_per_round=upr)
+            exp_results.append(metrics)
+            
+            # Count overcrowded interactions
+            if sim.interaction_log and 'is_overcrowded' in sim.interaction_log[0]:
+                overcrowded = sum(1 for r in sim.interaction_log if r.get('is_overcrowded', False))
+                overcrowded_counts.append(overcrowded / len(sim.interaction_log))
+        
+        concurrency_sweep[upr] = {
+            'revenue_mean': float(np.mean([r['total_revenue'] for r in exp_results])),
+            'revenue_std': float(np.std([r['total_revenue'] for r in exp_results])),
+            'revenue_per_user': float(np.mean([r['total_revenue'] / (50 * upr) for r in exp_results])),
+            'overcrowded_ratio': float(np.mean(overcrowded_counts)) if overcrowded_counts else 0.0,
+        }
+    
+    results['concurrency_sweep'] = concurrency_sweep
+    
+    # Compute marginal revenue
+    revenues = [concurrency_sweep[upr]['revenue_mean'] for upr in users_per_round_values]
+    marginal_revenues = [revenues[0]] + [revenues[i] - revenues[i-1] for i in range(1, len(revenues))]
+    results['marginal_revenues'] = dict(zip(users_per_round_values, marginal_revenues))
+    
+    # Check for diminishing returns
+    is_diminishing = all(marginal_revenues[i] <= marginal_revenues[i-1] for i in range(2, len(marginal_revenues)))
+    results['marginal_decreasing'] = is_diminishing
+    
+    # Experiment 3: Beta (penalty strength) Sweep
+    print("\n[Exp 3] Penalty Strength Sweep (beta)...")
+    beta_sweep = {}
+    beta_values = [0.1, 0.3, 0.5, 1.0, 2.0]
+    
+    for beta in tqdm(beta_values, desc="  Beta"):
+        exp_results = []
+        for i in range(n_simulations):
+            config = SimConfig(
+                **base_config,
+                enable_capacity=True,
+                capacity_top10=15,
+                capacity_middle=8,
+                capacity_tail=3,
+                crowding_penalty_alpha=beta,
+                seed=42 + i
+            )
+            sim = GiftLiveSimulator(config)
+            policy = GreedyPolicy()
+            metrics = sim.run_simulation(policy, n_rounds=50, users_per_round=400)
+            exp_results.append(metrics)
+        
+        beta_sweep[beta] = {
+            'revenue_mean': float(np.mean([r['total_revenue'] for r in exp_results])),
+            'gini_mean': float(np.mean([r['streamer_gini'] for r in exp_results])),
+        }
+    
+    results['beta_sweep'] = beta_sweep
+    
+    # Experiment 4: Capacity Scale Sweep
+    print("\n[Exp 4] Capacity Scale Sweep...")
+    capacity_sweep = {}
+    scale_values = [0.5, 1.0, 2.0]
+    
+    for scale in tqdm(scale_values, desc="  Scale"):
+        exp_results = []
+        for i in range(n_simulations):
+            config = SimConfig(
+                **base_config,
+                enable_capacity=True,
+                capacity_top10=int(15 * scale),
+                capacity_middle=int(8 * scale),
+                capacity_tail=int(3 * scale),
+                crowding_penalty_alpha=0.5,
+                seed=42 + i
+            )
+            sim = GiftLiveSimulator(config)
+            policy = GreedyPolicy()
+            metrics = sim.run_simulation(policy, n_rounds=50, users_per_round=400)
+            exp_results.append(metrics)
+        
+        capacity_sweep[scale] = {
+            'revenue_mean': float(np.mean([r['total_revenue'] for r in exp_results])),
+            'gini_mean': float(np.mean([r['streamer_gini'] for r in exp_results])),
+        }
+    
+    results['capacity_sweep'] = capacity_sweep
+    
+    # Gate decision
+    revenue_diff_pct = abs(baseline_results['with_capacity']['revenue']['mean'] - 
+                          baseline_results['no_capacity']['revenue']['mean']) / baseline_results['no_capacity']['revenue']['mean'] * 100
+    
+    gate_passed = is_diminishing and revenue_diff_pct > 1
+    results['gate4a_extended'] = 'PASS' if gate_passed else 'FAIL'
+    results['revenue_diff_pct'] = revenue_diff_pct
+    
+    if verbose:
+        print("\n" + "="*50)
+        print("Results Summary")
+        print("="*50)
+        print(f"Marginal Decreasing: {'✓' if is_diminishing else '✗'}")
+        print(f"Revenue Diff (with/without capacity): {revenue_diff_pct:.1f}%")
+        print(f"Gate-4A Extended: {results['gate4a_extended']}")
+    
+    return results
+
+
+def plot_mvp42_figures(results: Dict):
+    """Generate MVP-4.2 figures."""
+    print("\nGenerating MVP-4.2 figures...")
+    
+    # Fig1: Revenue vs Concurrency
+    fig, ax = plt.subplots(figsize=(6, 5))
+    
+    sweep = results['concurrency_sweep']
+    upr_values = sorted(sweep.keys())
+    revenues = [sweep[upr]['revenue_mean'] for upr in upr_values]
+    stds = [sweep[upr]['revenue_std'] for upr in upr_values]
+    
+    ax.errorbar(upr_values, revenues, yerr=stds, marker='o', linewidth=2, capsize=5, color='steelblue')
+    ax.set_xlabel('Users per Round (Concurrency)')
+    ax.set_ylabel('Total Revenue')
+    ax.set_title('Revenue vs Concurrency (with Capacity Constraints)')
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / 'mvp42_revenue_vs_concurrency.png')
+    plt.close()
+    print(f"  Saved: mvp42_revenue_vs_concurrency.png")
+    
+    # Fig2: Marginal Revenue
+    fig, ax = plt.subplots(figsize=(6, 5))
+    
+    marginal = results['marginal_revenues']
+    upr_values = sorted(marginal.keys())
+    marginal_vals = [marginal[upr] for upr in upr_values]
+    
+    ax.bar(range(len(upr_values)), marginal_vals, color='coral')
+    ax.set_xticks(range(len(upr_values)))
+    ax.set_xticklabels([str(u) for u in upr_values])
+    ax.set_xlabel('Users per Round')
+    ax.set_ylabel('Marginal Revenue')
+    ax.set_title(f'Marginal Revenue (Diminishing: {"✓" if results["marginal_decreasing"] else "✗"})')
+    ax.axhline(0, color='gray', linestyle='--')
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / 'mvp42_marginal_revenue.png')
+    plt.close()
+    print(f"  Saved: mvp42_marginal_revenue.png")
+    
+    # Fig3: Capacity Comparison (with/without)
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+    
+    baseline = results['baseline_comparison']
+    names = list(baseline.keys())
+    revenues = [baseline[n]['revenue']['mean'] for n in names]
+    ginis = [baseline[n]['gini']['mean'] for n in names]
+    
+    axes[0].bar(names, revenues, color=['gray', 'steelblue'])
+    axes[0].set_ylabel('Total Revenue')
+    axes[0].set_title('Revenue: Capacity Effect')
+    
+    axes[1].bar(names, ginis, color=['gray', 'steelblue'])
+    axes[1].set_ylabel('Streamer Gini')
+    axes[1].set_title('Fairness: Capacity Effect')
+    
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / 'mvp42_capacity_comparison.png')
+    plt.close()
+    print(f"  Saved: mvp42_capacity_comparison.png")
+    
+    # Fig4: Parameter Heatmap (Beta x Capacity Scale)
+    fig, ax = plt.subplots(figsize=(6, 5))
+    
+    beta_sweep = results['beta_sweep']
+    betas = sorted(beta_sweep.keys())
+    revenues = [beta_sweep[b]['revenue_mean'] for b in betas]
+    
+    ax.plot(betas, revenues, 'o-', linewidth=2, markersize=8, color='teal')
+    ax.set_xlabel('Crowding Penalty (Beta)')
+    ax.set_ylabel('Total Revenue')
+    ax.set_title('Revenue vs Penalty Strength')
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / 'mvp42_param_heatmap.png')
+    plt.close()
+    print(f"  Saved: mvp42_param_heatmap.png")
+    
+    # Fig5: Revenue per User (efficiency)
+    fig, ax = plt.subplots(figsize=(6, 5))
+    
+    sweep = results['concurrency_sweep']
+    upr_values = sorted(sweep.keys())
+    rev_per_user = [sweep[upr]['revenue_per_user'] for upr in upr_values]
+    
+    ax.plot(upr_values, rev_per_user, 'o-', linewidth=2, markersize=8, color='purple')
+    ax.set_xlabel('Users per Round (Concurrency)')
+    ax.set_ylabel('Revenue per User')
+    ax.set_title('Efficiency: Revenue per User vs Concurrency')
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / 'mvp42_streamer_revenue_by_tier.png')
+    plt.close()
+    print(f"  Saved: mvp42_streamer_revenue_by_tier.png")
+
+
+# ============================================================
 # Main
 # ============================================================
 
 def main():
     parser = argparse.ArgumentParser(description='Run simulator experiments')
-    parser.add_argument('--mvp', type=str, choices=['0.3', '2.1', '2.2', '4.1'], 
+    parser.add_argument('--mvp', type=str, choices=['0.3', '2.1', '2.2', '4.1', '4.2'],
                         help='Run specific MVP')
     parser.add_argument('--all', action='store_true', help='Run all MVPs')
     parser.add_argument('--n_sim', type=int, default=100, help='Number of simulations')
@@ -1414,6 +2002,16 @@ def main():
         with open(RESULTS_DIR / 'simulator_v2_amount_20260109.json', 'w') as f:
             json.dump(results_41, f, indent=2, default=str)
         print(f"\nSaved: simulator_v2_amount_20260109.json")
+    
+    if args.mvp == '4.2':
+        results_42 = run_mvp42_concurrency(n_simulations=args.n_sim)
+        plot_mvp42_figures(results_42)
+        all_results['mvp42'] = results_42
+        
+        # Save results
+        with open(RESULTS_DIR / 'concurrency_capacity_20260109.json', 'w') as f:
+            json.dump(results_42, f, indent=2, default=str)
+        print(f"\nSaved: concurrency_capacity_20260109.json")
     
     print("\n" + "="*60)
     print("All experiments completed!")

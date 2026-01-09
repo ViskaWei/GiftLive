@@ -150,6 +150,12 @@ def crowding_penalty(n_current, capacity):
 - 观测到收益随并发边际递减
 - 头部主播在高并发时收益饱和
 
+**实验结果 (EXP-15)**:
+- ⚠️ **未观测到边际递减**: overcrowded_ratio < 1%
+- 原因: 容量设置过高 (top=100, mid=50, tail=20) vs 用户负载 (avg=8 users/streamer)
+- 结论: 需降低容量重新测试，或接受"合理配置下容量非瓶颈"
+- 报告: [exp_concurrency_capacity_20260109.md](./exp/exp_concurrency_capacity_20260109.md)
+
 ### 4.3 MVP-4.3: 召回-精排分工
 
 **问题**: Direct 全量排序强，Two-Stage 金主内排序强，如何结合？
