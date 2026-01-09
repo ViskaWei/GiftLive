@@ -40,11 +40,38 @@ class SimConfig:
     gift_theta3: float = 0.3   # Engagement coefficient
     gift_theta4: float = -0.1  # Crowding coefficient
     
-    # Gift amount model
+    # Gift amount model (V1)
     amount_mu0: float = 2.0
     amount_mu1: float = 0.8    # Wealth coefficient
     amount_mu2: float = 0.5    # Match coefficient
     amount_sigma: float = 0.5
+    
+    # Gift amount model V2 (quantile-matched continuous)
+    amount_version: int = 1  # 1 = V1 (original), 2 = V2 (lognormal+pareto), 3 = V2+ (discrete tiers)
+    # V2 Lognormal parameters (for amounts < P90)
+    v2_lognormal_mu: float = 0.693  # log(2) to match median=2
+    v2_lognormal_sigma: float = 2.96  # calibrated for P90=88
+    # V2 Pareto tail parameters (for amounts > P90)
+    v2_pareto_threshold: float = 88.0  # P90 as threshold
+    v2_pareto_alpha: float = 0.55  # shape parameter for heavy tail
+    v2_tail_weight: float = 0.10  # probability of sampling from tail
+    # V2 calibration targets (for reference)
+    v2_target_median: float = 2.0
+    v2_target_p90: float = 88.0
+    v2_target_p99: float = 1488.0
+    
+    # Gift amount model V2+ (discrete tiers - new!)
+    # Discrete gift tier values (real platform gift prices)
+    v2plus_tiers: tuple = (1, 2, 10, 52, 100, 520, 1000, 1314, 5200, 13140)
+    # Base tier probabilities (calibrated to match P50=2, P90=88, P99=1488)
+    # v3 results: P50=2.0 ✓, P90=125.8 (need 88), P99=1498.7 ✓, Mean=94.2 ✓
+    # Need to reduce 100/520/1000 tiers to bring P90 down
+    # Recalibrated weights v4:
+    v2plus_tier_probs: tuple = (0.38, 0.32, 0.15, 0.08, 0.035, 0.022, 0.008, 0.003, 0.0015, 0.0005)
+    # Wealth effect on tier selection (higher wealth -> shift to higher tiers)
+    v2plus_wealth_scale: float = 0.10
+    # Match effect on tier selection
+    v2plus_match_scale: float = 0.05
     
     # Externality / diminishing returns
     gamma: float = 0.05
@@ -201,7 +228,21 @@ class GiftModel:
         return prob
     
     def gift_amount(self, user: User, streamer: Streamer) -> float:
-        """Sample gift amount given gifting occurred."""
+        """Sample gift amount given gifting occurred.
+        
+        V1: Original lognormal model with user/match features
+        V2: Quantile-matched mixture (Lognormal + Pareto tail)
+        V2+: Discrete tiers with wealth/match influence
+        """
+        if self.config.amount_version == 3:
+            return self._gift_amount_v2plus(user, streamer)
+        elif self.config.amount_version == 2:
+            return self._gift_amount_v2(user, streamer)
+        else:
+            return self._gift_amount_v1(user, streamer)
+    
+    def _gift_amount_v1(self, user: User, streamer: Streamer) -> float:
+        """V1: Original lognormal model."""
         log_wealth = np.log1p(user.wealth)
         match = self.compute_match(user, streamer)
         
@@ -213,6 +254,88 @@ class GiftModel:
         )
         
         return max(1.0, np.exp(log_amount))  # Minimum amount is 1
+    
+    def _gift_amount_v2(self, user: User, streamer: Streamer) -> float:
+        """V2: Quantile-matched mixture (Lognormal + Pareto tail).
+        
+        Calibrated to match real data:
+        - P50 = 2.0
+        - P90 = 88.0
+        - P99 = 1488.0
+        """
+        # Decide: sample from body (Lognormal) or tail (Pareto)
+        if self.rng.random() < self.config.v2_tail_weight:
+            # Sample from Pareto tail (for large amounts)
+            # Pareto: X = threshold * U^(-1/alpha), where U ~ Uniform(0,1)
+            u = self.rng.random()
+            # Ensure we don't get infinity
+            u = max(u, 1e-10)
+            amount = self.config.v2_pareto_threshold * (u ** (-1.0 / self.config.v2_pareto_alpha))
+            # Cap at reasonable maximum
+            amount = min(amount, 100000.0)
+        else:
+            # Sample from Lognormal body (for small/medium amounts)
+            log_amount = self.rng.normal(
+                self.config.v2_lognormal_mu,
+                self.config.v2_lognormal_sigma
+            )
+            amount = np.exp(log_amount)
+            # Truncate at threshold to avoid overlap with tail
+            amount = min(amount, self.config.v2_pareto_threshold)
+        
+        # Add slight user/match effect (scaled down to preserve calibration)
+        log_wealth = np.log1p(user.wealth)
+        match = self.compute_match(user, streamer)
+        # Small multiplier based on wealth and match (centered around 1.0)
+        multiplier = 1.0 + 0.05 * (log_wealth / 5.0 - 1.0) + 0.02 * match
+        multiplier = max(0.5, min(2.0, multiplier))  # Clamp to [0.5, 2.0]
+        
+        amount = amount * multiplier
+        
+        return max(1.0, amount)  # Minimum amount is 1
+    
+    def _gift_amount_v2plus(self, user: User, streamer: Streamer) -> float:
+        """V2+: Discrete tier sampling with wealth/match influence.
+        
+        Samples from discrete gift tiers (1, 2, 10, 52, 100, 520, 1000, 1314, 5200, 13140)
+        with probabilities adjusted based on user wealth and user-streamer match.
+        
+        Calibrated to match real data:
+        - P50 ≈ 2.0
+        - P90 ≈ 88-100
+        - P99 ≈ 1000-1500
+        """
+        tiers = np.array(self.config.v2plus_tiers)
+        base_probs = np.array(self.config.v2plus_tier_probs)
+        
+        # Compute user wealth effect (normalized)
+        log_wealth = np.log1p(user.wealth)
+        wealth_percentile = (log_wealth - 3.0) / 3.0  # Roughly normalize to [-1, 1]
+        wealth_percentile = np.clip(wealth_percentile, -1.0, 2.0)
+        
+        # Compute match effect
+        match = self.compute_match(user, streamer)
+        match_effect = match  # Already roughly in [-1, 1]
+        
+        # Adjust tier log-probabilities (shift distribution for wealthier users)
+        tier_indices = np.arange(len(tiers))
+        # Higher wealth/match -> increase probability of higher tiers
+        log_probs = np.log(base_probs + 1e-10)
+        shift = (
+            self.config.v2plus_wealth_scale * wealth_percentile * tier_indices +
+            self.config.v2plus_match_scale * match_effect * tier_indices
+        )
+        adjusted_log_probs = log_probs + shift
+        
+        # Convert back to probabilities (softmax)
+        adjusted_probs = np.exp(adjusted_log_probs - adjusted_log_probs.max())
+        adjusted_probs = adjusted_probs / adjusted_probs.sum()
+        
+        # Sample tier
+        tier_idx = self.rng.choice(len(tiers), p=adjusted_probs)
+        amount = float(tiers[tier_idx])
+        
+        return amount
     
     def apply_diminishing_returns(self, amount: float, streamer: Streamer) -> float:
         """Apply diminishing returns based on crowding."""
@@ -239,7 +362,19 @@ class GiftModel:
         """Compute expected gift value E[gift_prob * gift_amount]."""
         prob = self.gift_probability(user, streamer)
         
-        # Expected log amount
+        if self.config.amount_version == 2:
+            expected_amount = self._expected_amount_v2(user, streamer)
+        else:
+            expected_amount = self._expected_amount_v1(user, streamer)
+        
+        # Apply diminishing returns
+        gamma = self.config.gamma
+        expected_amount = expected_amount / (1.0 + gamma * streamer.n_big_donors)
+        
+        return prob * expected_amount
+    
+    def _expected_amount_v1(self, user: User, streamer: Streamer) -> float:
+        """V1: Expected amount from lognormal model."""
         log_wealth = np.log1p(user.wealth)
         match = self.compute_match(user, streamer)
         expected_log = (
@@ -249,13 +384,46 @@ class GiftModel:
         )
         # E[exp(log_amount)] when log_amount ~ N(mu, sigma^2) is exp(mu + sigma^2/2)
         expected_amount = np.exp(expected_log + 0.5 * self.config.amount_sigma**2)
-        expected_amount = max(1.0, expected_amount)
+        return max(1.0, expected_amount)
+    
+    def _expected_amount_v2(self, user: User, streamer: Streamer) -> float:
+        """V2: Expected amount from mixture distribution.
         
-        # Apply diminishing returns
-        gamma = self.config.gamma
-        expected_amount = expected_amount / (1.0 + gamma * streamer.n_big_donors)
+        E[X] = (1-p) * E[Lognormal] + p * E[Pareto]
+        where p = tail_weight
+        """
+        mu = self.config.v2_lognormal_mu
+        sigma = self.config.v2_lognormal_sigma
+        threshold = self.config.v2_pareto_threshold
+        alpha = self.config.v2_pareto_alpha
+        tail_weight = self.config.v2_tail_weight
         
-        return prob * expected_amount
+        # E[Lognormal(mu, sigma)] = exp(mu + sigma^2/2)
+        # But we truncate at threshold, so this is approximate
+        e_lognormal = np.exp(mu + 0.5 * sigma**2)
+        # Truncate expected value roughly
+        e_lognormal = min(e_lognormal, threshold)
+        
+        # E[Pareto] with shape alpha < 1 is infinite, so use median instead
+        # For alpha > 1: E[Pareto] = threshold * alpha / (alpha - 1)
+        # For alpha <= 1: Use a capped approximation
+        if alpha > 1:
+            e_pareto = threshold * alpha / (alpha - 1)
+        else:
+            # Use P50 of Pareto as approximation: threshold * 2^(1/alpha)
+            e_pareto = threshold * (2 ** (1.0 / alpha))
+        e_pareto = min(e_pareto, 10000.0)  # Cap for stability
+        
+        # Mixture expected value
+        expected_amount = (1 - tail_weight) * e_lognormal + tail_weight * e_pareto
+        
+        # Apply slight user effect
+        log_wealth = np.log1p(user.wealth)
+        match = self.compute_match(user, streamer)
+        multiplier = 1.0 + 0.05 * (log_wealth / 5.0 - 1.0) + 0.02 * match
+        multiplier = max(0.5, min(2.0, multiplier))
+        
+        return max(1.0, expected_amount * multiplier)
 
 
 class GiftLiveSimulator:
@@ -489,21 +657,58 @@ class GiftLiveSimulator:
         )
         prob = 1.0 / (1.0 + np.exp(-logit))
         
-        # Expected log amount
-        expected_log = (
-            self.config.amount_mu0 +
-            self.config.amount_mu1 * log_wealth[:, np.newaxis] +
-            self.config.amount_mu2 * match_scores
-        )
-        # E[exp(log_amount)] when log_amount ~ N(mu, sigma^2) is exp(mu + sigma^2/2)
-        expected_amount = np.exp(expected_log + 0.5 * self.config.amount_sigma**2)
-        expected_amount = np.maximum(1.0, expected_amount)
+        # Expected amount based on version
+        if self.config.amount_version == 2:
+            expected_amount = self._get_expected_amount_v2_vectorized(
+                log_wealth, match_scores, n_users, n_streamers
+            )
+        else:
+            # V1: Original lognormal model
+            expected_log = (
+                self.config.amount_mu0 +
+                self.config.amount_mu1 * log_wealth[:, np.newaxis] +
+                self.config.amount_mu2 * match_scores
+            )
+            expected_amount = np.exp(expected_log + 0.5 * self.config.amount_sigma**2)
+            expected_amount = np.maximum(1.0, expected_amount)
         
         # Apply diminishing returns
         gamma = self.config.gamma
         expected_amount = expected_amount / (1.0 + gamma * streamer_n_big[np.newaxis, :])
         
         return prob * expected_amount
+    
+    def _get_expected_amount_v2_vectorized(
+        self, log_wealth: np.ndarray, match_scores: np.ndarray,
+        n_users: int, n_streamers: int
+    ) -> np.ndarray:
+        """V2: Vectorized expected amount from mixture distribution."""
+        mu = self.config.v2_lognormal_mu
+        sigma = self.config.v2_lognormal_sigma
+        threshold = self.config.v2_pareto_threshold
+        alpha = self.config.v2_pareto_alpha
+        tail_weight = self.config.v2_tail_weight
+        
+        # E[Lognormal]
+        e_lognormal = np.exp(mu + 0.5 * sigma**2)
+        e_lognormal = min(e_lognormal, threshold)
+        
+        # E[Pareto]
+        if alpha > 1:
+            e_pareto = threshold * alpha / (alpha - 1)
+        else:
+            e_pareto = threshold * (2 ** (1.0 / alpha))
+        e_pareto = min(e_pareto, 10000.0)
+        
+        # Base expected amount
+        base_amount = (1 - tail_weight) * e_lognormal + tail_weight * e_pareto
+        
+        # User multiplier (slight effect)
+        multiplier = 1.0 + 0.05 * (log_wealth[:, np.newaxis] / 5.0 - 1.0) + 0.02 * match_scores
+        multiplier = np.clip(multiplier, 0.5, 2.0)
+        
+        expected_amount = base_amount * multiplier
+        return np.maximum(1.0, expected_amount)
 
 
 class AllocationPolicy:

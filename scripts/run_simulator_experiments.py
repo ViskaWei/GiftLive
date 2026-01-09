@@ -331,6 +331,326 @@ def plot_mvp03_figures(results: Dict):
 
 
 # ============================================================
+# MVP-4.1: Simulator V2 Amount Calibration
+# ============================================================
+
+def run_mvp41_amount_calibration(n_simulations: int = 100, verbose: bool = True):
+    """Run MVP-4.1: Simulator V2 amount distribution calibration.
+    
+    Compare V1, V2 (lognormal+pareto), and V2+ (discrete tiers).
+    """
+    print("\n" + "="*60)
+    print("MVP-4.1: Simulator V2 Amount Calibration")
+    print("="*60)
+    
+    # Base config
+    base_config = {
+        'n_users': 10000,
+        'n_streamers': 500,
+        'wealth_lognormal_mean': 2.5,
+        'wealth_lognormal_std': 1.2,
+        'wealth_pareto_alpha': 1.3,
+        'wealth_pareto_min': 80,
+        'wealth_pareto_weight': 0.05,
+        'gift_theta0': -6.5,
+        'gift_theta1': 0.4,
+        'gift_theta2': 0.8,
+        'gift_theta3': 0.2,
+        'gift_theta4': -0.05,
+        'amount_mu0': 0.5,
+        'amount_mu1': 0.9,
+        'amount_mu2': 0.4,
+        'amount_sigma': 1.5,
+        'gamma': 0.02,
+    }
+    
+    # Test all three versions
+    versions = {
+        'V1': {'amount_version': 1},
+        'V2': {'amount_version': 2},
+        'V2+': {'amount_version': 3},
+    }
+    
+    results = {}
+    
+    for version_name, version_config in versions.items():
+        print(f"\nRunning {version_name} ({n_simulations} simulations)...")
+        
+        version_results = []
+        all_amounts = []
+        
+        for i in tqdm(range(n_simulations), desc=f"  {version_name}"):
+            config_dict = {**base_config, **version_config, 'seed': 42 + i}
+            config = SimConfig(**config_dict)
+            sim = GiftLiveSimulator(config)
+            policy = GreedyPolicy()
+            metrics = sim.run_simulation(policy, n_rounds=50, users_per_round=200)
+            version_results.append(metrics)
+            
+            # Collect all amounts for distribution analysis
+            amounts = [r['amount'] for r in sim.interaction_log if r['amount'] > 0]
+            all_amounts.extend(amounts)
+        
+        # Aggregate metrics
+        agg = {
+            'amount_median': {
+                'mean': float(np.mean([r['amount_median'] for r in version_results])),
+                'std': float(np.std([r['amount_median'] for r in version_results])),
+            },
+            'amount_p90': {
+                'mean': float(np.mean([r['amount_p90'] for r in version_results])),
+                'std': float(np.std([r['amount_p90'] for r in version_results])),
+            },
+            'amount_p99': {
+                'mean': float(np.mean([r['amount_p99'] for r in version_results])),
+                'std': float(np.std([r['amount_p99'] for r in version_results])),
+            },
+            'amount_mean': {
+                'mean': float(np.mean([r['amount_mean'] for r in version_results])),
+                'std': float(np.std([r['amount_mean'] for r in version_results])),
+            },
+            'user_gini': {
+                'mean': float(np.mean([r['user_gini'] for r in version_results])),
+                'std': float(np.std([r['user_gini'] for r in version_results])),
+            },
+            'gift_rate': {
+                'mean': float(np.mean([r['gift_rate'] for r in version_results])),
+                'std': float(np.std([r['gift_rate'] for r in version_results])),
+            },
+        }
+        
+        # Compute top 1% user share from all amounts
+        if len(all_amounts) > 0:
+            all_amounts = np.array(all_amounts)
+            top_1_idx = max(1, int(len(all_amounts) * 0.01))
+            sorted_amounts = np.sort(all_amounts)[::-1]
+            top_1_share = sorted_amounts[:top_1_idx].sum() / all_amounts.sum()
+            agg['top_1_user_share'] = float(top_1_share)
+        
+        results[version_name] = agg
+        
+        if verbose:
+            print(f"    P50={agg['amount_median']['mean']:.1f}, "
+                  f"P90={agg['amount_p90']['mean']:.1f}, "
+                  f"P99={agg['amount_p99']['mean']:.1f}, "
+                  f"Mean={agg['amount_mean']['mean']:.1f}")
+    
+    # Compute errors vs calibration targets
+    print("\n--- Calibration Comparison ---")
+    for version_name, agg in results.items():
+        errors = {}
+        for metric, target in [
+            ('amount_median', CALIBRATION_TARGETS['amount_median']),
+            ('amount_p90', CALIBRATION_TARGETS['amount_p90']),
+            ('amount_p99', CALIBRATION_TARGETS['amount_p99']),
+            ('amount_mean', CALIBRATION_TARGETS['amount_mean']),
+        ]:
+            sim_val = agg[metric]['mean']
+            error_pct = abs(sim_val - target) / target * 100 if target > 0 else 0
+            errors[metric] = error_pct
+            status = "✓" if error_pct < 30 else "✗"
+            print(f"  {version_name} {metric}: Sim={sim_val:.1f}, Target={target:.1f}, Error={error_pct:.1f}% {status}")
+        
+        results[version_name]['errors'] = errors
+    
+    # Gate-4A decision
+    v2plus_median_error = results['V2+']['errors']['amount_median']
+    v2plus_p90_error = results['V2+']['errors']['amount_p90']
+    v2plus_mean_error = results['V2+']['errors']['amount_mean']
+    
+    if v2plus_median_error < 30 and v2plus_p90_error < 30 and v2plus_mean_error < 30:
+        gate4a = "PASS"
+        decision = "Proceed to MVP-4.2 (concurrency modeling)"
+    else:
+        gate4a = "FAIL"
+        decision = "Tune V2+ parameters or try alternative distributions"
+    
+    print(f"\n=== Gate-4A: {gate4a} ===")
+    print(f"    V2+ P50 Error: {v2plus_median_error:.1f}% (target <30%)")
+    print(f"    V2+ P90 Error: {v2plus_p90_error:.1f}% (target <30%)")
+    print(f"    V2+ Mean Error: {v2plus_mean_error:.1f}% (target <30%)")
+    print(f"    Decision: {decision}")
+    
+    final_results = {
+        'versions': results,
+        'calibration_targets': CALIBRATION_TARGETS,
+        'gate4a': gate4a,
+        'decision': decision,
+    }
+    
+    return final_results
+
+
+def plot_mvp41_figures(results: Dict):
+    """Generate MVP-4.1 figures."""
+    print("\nGenerating MVP-4.1 figures...")
+    
+    versions = results['versions']
+    targets = results['calibration_targets']
+    
+    # Fig1: Quantile Comparison (grouped bar)
+    fig, ax = plt.subplots(figsize=(6, 5))
+    
+    metrics = ['amount_median', 'amount_p90', 'amount_p99']
+    metric_labels = ['P50', 'P90', 'P99']
+    x = np.arange(len(metrics))
+    width = 0.2
+    
+    colors = ['gray', 'steelblue', 'coral', 'teal']
+    
+    # Plot target values
+    target_vals = [targets[m] for m in metrics]
+    ax.bar(x - 1.5*width, target_vals, width, label='Real Data', color='black', alpha=0.7)
+    
+    # Plot each version
+    for i, (version_name, data) in enumerate(versions.items()):
+        vals = [data[m]['mean'] for m in metrics]
+        ax.bar(x + (i-0.5)*width, vals, width, label=version_name, color=colors[i+1])
+    
+    ax.set_ylabel('Amount')
+    ax.set_title('Amount Distribution: Quantile Comparison')
+    ax.set_xticks(x)
+    ax.set_xticklabels(metric_labels)
+    ax.legend()
+    ax.set_yscale('log')
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / 'mvp41_quantile_comparison.png')
+    plt.close()
+    print(f"  Saved: mvp41_quantile_comparison.png")
+    
+    # Fig2: Error Comparison (bar)
+    fig, ax = plt.subplots(figsize=(6, 5))
+    
+    version_names = list(versions.keys())
+    metrics_to_plot = ['amount_median', 'amount_p90', 'amount_mean']
+    metric_short = ['P50', 'P90', 'Mean']
+    
+    x = np.arange(len(version_names))
+    width = 0.25
+    
+    for i, (metric, label) in enumerate(zip(metrics_to_plot, metric_short)):
+        errors = [versions[v]['errors'][metric] for v in version_names]
+        ax.bar(x + i*width, errors, width, label=label)
+    
+    ax.axhline(30, color='red', linestyle='--', label='30% Threshold')
+    ax.set_ylabel('Error (%)')
+    ax.set_title('Calibration Error by Version')
+    ax.set_xticks(x + width)
+    ax.set_xticklabels(version_names)
+    ax.legend()
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / 'mvp41_error_comparison.png')
+    plt.close()
+    print(f"  Saved: mvp41_error_comparison.png")
+    
+    # Fig3: Amount Distribution Histogram (sample from each version)
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    
+    for i, (version_name, version_config) in enumerate([
+        ('V1', {'amount_version': 1}),
+        ('V2', {'amount_version': 2}),
+        ('V2+', {'amount_version': 3}),
+    ]):
+        config = SimConfig(
+            n_users=10000, n_streamers=500,
+            wealth_lognormal_mean=2.5, wealth_lognormal_std=1.2,
+            wealth_pareto_alpha=1.3, wealth_pareto_min=80, wealth_pareto_weight=0.05,
+            gift_theta0=-6.5, gift_theta1=0.4, gift_theta2=0.8,
+            gift_theta3=0.2, gift_theta4=-0.05,
+            amount_mu0=0.5, amount_mu1=0.9, amount_mu2=0.4, amount_sigma=1.5,
+            gamma=0.02, seed=42, **version_config
+        )
+        sim = GiftLiveSimulator(config)
+        policy = GreedyPolicy()
+        _ = sim.run_simulation(policy, n_rounds=50, users_per_round=200)
+        amounts = [r['amount'] for r in sim.interaction_log if r['amount'] > 0]
+        
+        ax = axes[i]
+        ax.hist(np.log1p(amounts), bins=50, edgecolor='black', alpha=0.7, color=colors[i+1])
+        ax.axvline(np.log1p(2), color='red', linestyle='--', label='Target P50=2')
+        ax.axvline(np.log1p(88), color='orange', linestyle='--', label='Target P90=88')
+        ax.set_xlabel('log(1+Amount)')
+        ax.set_ylabel('Frequency')
+        ax.set_title(f'{version_name} Amount Distribution')
+        ax.legend(fontsize=8)
+    
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / 'mvp41_amount_distribution.png')
+    plt.close()
+    print(f"  Saved: mvp41_amount_distribution.png")
+    
+    # Fig4: CDF Comparison
+    fig, ax = plt.subplots(figsize=(6, 5))
+    
+    for i, (version_name, version_config) in enumerate([
+        ('V1', {'amount_version': 1}),
+        ('V2', {'amount_version': 2}),
+        ('V2+', {'amount_version': 3}),
+    ]):
+        config = SimConfig(
+            n_users=10000, n_streamers=500,
+            wealth_lognormal_mean=2.5, wealth_lognormal_std=1.2,
+            wealth_pareto_alpha=1.3, wealth_pareto_min=80, wealth_pareto_weight=0.05,
+            gift_theta0=-6.5, gift_theta1=0.4, gift_theta2=0.8,
+            gift_theta3=0.2, gift_theta4=-0.05,
+            amount_mu0=0.5, amount_mu1=0.9, amount_mu2=0.4, amount_sigma=1.5,
+            gamma=0.02, seed=42, **version_config
+        )
+        sim = GiftLiveSimulator(config)
+        policy = GreedyPolicy()
+        _ = sim.run_simulation(policy, n_rounds=50, users_per_round=200)
+        amounts = np.array([r['amount'] for r in sim.interaction_log if r['amount'] > 0])
+        
+        sorted_amounts = np.sort(amounts)
+        cdf = np.arange(1, len(sorted_amounts) + 1) / len(sorted_amounts)
+        ax.plot(sorted_amounts, cdf, label=version_name, color=colors[i+1], linewidth=2)
+    
+    # Add target percentile lines
+    ax.axhline(0.5, color='gray', linestyle=':', alpha=0.5)
+    ax.axhline(0.9, color='gray', linestyle=':', alpha=0.5)
+    ax.axhline(0.99, color='gray', linestyle=':', alpha=0.5)
+    ax.axvline(targets['amount_median'], color='red', linestyle='--', alpha=0.5, label=f'Target P50={targets["amount_median"]}')
+    ax.axvline(targets['amount_p90'], color='orange', linestyle='--', alpha=0.5, label=f'Target P90={targets["amount_p90"]}')
+    
+    ax.set_xlabel('Amount')
+    ax.set_ylabel('CDF')
+    ax.set_title('Amount CDF Comparison')
+    ax.set_xscale('log')
+    ax.set_xlim(1, 10000)
+    ax.legend(fontsize=8)
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / 'mvp41_cdf_comparison.png')
+    plt.close()
+    print(f"  Saved: mvp41_cdf_comparison.png")
+    
+    # Fig5: Gate-4A Summary
+    fig, ax = plt.subplots(figsize=(6, 5))
+    
+    v2plus = versions['V2+']
+    metrics = ['amount_median', 'amount_p90', 'amount_mean']
+    labels = ['P50', 'P90', 'Mean']
+    errors = [v2plus['errors'][m] for m in metrics]
+    
+    colors_bar = ['green' if e < 30 else 'red' for e in errors]
+    bars = ax.bar(labels, errors, color=colors_bar, edgecolor='black')
+    ax.axhline(30, color='red', linestyle='--', linewidth=2, label='30% Threshold')
+    
+    ax.set_ylabel('Error (%)')
+    ax.set_title(f'V2+ Calibration Error (Gate-4A: {results["gate4a"]})')
+    ax.legend()
+    
+    # Add value labels
+    for bar, val in zip(bars, errors):
+        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1, 
+                f'{val:.1f}%', ha='center', fontsize=10)
+    
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / 'mvp41_gate4a_summary.png')
+    plt.close()
+    print(f"  Saved: mvp41_gate4a_summary.png")
+
+
+# ============================================================
 # MVP-2.1: Concave Allocation
 # ============================================================
 
@@ -1039,7 +1359,7 @@ def plot_mvp22_figures(results: Dict):
 
 def main():
     parser = argparse.ArgumentParser(description='Run simulator experiments')
-    parser.add_argument('--mvp', type=str, choices=['0.3', '2.1', '2.2'], 
+    parser.add_argument('--mvp', type=str, choices=['0.3', '2.1', '2.2', '4.1'], 
                         help='Run specific MVP')
     parser.add_argument('--all', action='store_true', help='Run all MVPs')
     parser.add_argument('--n_sim', type=int, default=100, help='Number of simulations')
@@ -1084,6 +1404,16 @@ def main():
         with open(RESULTS_DIR / 'coldstart_constraint_20260108.json', 'w') as f:
             json.dump(results_22, f, indent=2, default=str)
         print(f"\nSaved: coldstart_constraint_20260108.json")
+    
+    if args.mvp == '4.1':
+        results_41 = run_mvp41_amount_calibration(n_simulations=args.n_sim)
+        plot_mvp41_figures(results_41)
+        all_results['mvp41'] = results_41
+        
+        # Save results
+        with open(RESULTS_DIR / 'simulator_v2_amount_20260109.json', 'w') as f:
+            json.dump(results_41, f, indent=2, default=str)
+        print(f"\nSaved: simulator_v2_amount_20260109.json")
     
     print("\n" + "="*60)
     print("All experiments completed!")
