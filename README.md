@@ -177,3 +177,11 @@ GiftLive/
 | 2026-01-08 | 推荐策略确定：Direct Reg + Greedy + 软约束 + SNIPS |
 
 **作者**: Viska Wei | **数据**: KuaiLive | **完成度**: 64% (16/25 MVP)
+
+---
+
+## 📬 Contact Me
+
+| 💬 WeChat | 📧 Email |
+|-----------|----------|
+| **Viska-** | **viskawei@gmail.com** |
