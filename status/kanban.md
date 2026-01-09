@@ -1,6 +1,6 @@
 # 📋 Kanban
 
-> **最后更新**: 2026-01-09
+> **最后更新**: 2026-01-09 | **战略转向**: 从"预测更准"转向"分配更对"
 
 ---
 
@@ -10,11 +10,11 @@
 ┌─────────────┬─────────────┬─────────────┬─────────────┐
 │   ⏳ 计划    │   🔴 就绪    │   🚀 运行    │   ✅ 完成    │
 ├─────────────┼─────────────┼─────────────┼─────────────┤
-│ MVP-4.5     │ MVP-4.1     │             │ Phase 0-3   │
-│ MVP-4.6     │ MVP-4.2     │             │ (12 MVP)    │
-│ MVP-4.7     │ MVP-4.3     │             │             │
-│             │ MVP-4.4     │             │ Phase 4     │
-│             │             │             │ 立项 ✓      │
+│ MVP-5.3     │ MVP-5.1     │             │ Phase 0-3   │
+│ MVP-5.4     │ MVP-5.2     │             │ (12 MVP)    │
+│ MVP-5.5     │             │             │             │
+│             │             │             │ Phase 4     │
+│             │             │             │ (2 MVP) ✓   │
 └─────────────┴─────────────┴─────────────┴─────────────┘
 ```
 
@@ -34,17 +34,22 @@
 
 ## 按主题分类
 
-### Gift Allocation - Phase 4
+### Gift Allocation - Phase 5 (分配优化)
 
-| MVP | 名称 | 状态 | 优先级 | 链接 |
-|-----|------|------|--------|------|
-| 4.1 | Simulator V2 - 金额校准 | 🔴 就绪 | P0 | [立项书](../gift_allocation/gift_allocation_phase4_charter.md#41-mvp-41-simulator-v2---金额校准) |
-| 4.2 | Simulator V2 - 并发容量 | 🔴 就绪 | P0 | [立项书](../gift_allocation/gift_allocation_phase4_charter.md#42-mvp-42-simulator-v2---并发容量) |
-| 4.3 | 召回-精排分工 | 🔴 就绪 | P1 | [立项书](../gift_allocation/gift_allocation_phase4_charter.md#43-mvp-43-召回-精排分工) |
-| 4.4 | 供需匹配/影子价格 | 🔴 就绪 | P1 | [立项书](../gift_allocation/gift_allocation_phase4_charter.md#44-mvp-44-供需匹配影子价格贪心) |
-| 4.5 | 鲸鱼分散 (b-matching) | ⏳ 计划 | P2 | [立项书](../gift_allocation/gift_allocation_phase4_charter.md#45-mvp-45-鲸鱼分散-b-matching) |
-| 4.6 | 不确定性排序 (UCB) | ⏳ 计划 | P2 | [立项书](../gift_allocation/gift_allocation_phase4_charter.md#46-mvp-46-不确定性排序-ucb) |
-| 4.7 | 多目标生态调度 | ⏳ 计划 | P2 | [立项书](../gift_allocation/gift_allocation_phase4_charter.md#47-mvp-47-多目标生态调度) |
+| MVP | 名称 | 状态 | 优先级 | Gate | 链接 |
+|-----|------|------|--------|------|------|
+| 5.1 | 召回-精排分工 | 🔴 就绪 | P0 | Gate-5A | [Roadmap](../gift_allocation/gift_allocation_roadmap.md#mvp-51-召回-精排分工) |
+| 5.2 | 影子价格/供需匹配 | 🔴 就绪 | P0 | Gate-5B | [Roadmap](../gift_allocation/gift_allocation_roadmap.md#mvp-52-影子价格供需匹配) |
+| 5.3 | 鲸鱼分散 (b-matching) | ⏳ 计划 | P1 | Gate-5C | [Roadmap](../gift_allocation/gift_allocation_roadmap.md#mvp-53-鲸鱼分散-b-matching) |
+| 5.4 | 风险控制 (UCB/CVaR) | ⏳ 计划 | P1 | Gate-5D | [Roadmap](../gift_allocation/gift_allocation_roadmap.md#mvp-54-风险控制-ucbcvar) |
+| 5.5 | 多目标生态调度 | ⏳ 计划 | P2 | - | [Roadmap](../gift_allocation/gift_allocation_roadmap.md#mvp-55-多目标生态调度) |
+
+### Gift Allocation - Phase 4 (已完成)
+
+| MVP | 名称 | 状态 | 核心结论 |
+|-----|------|------|---------|
+| 4.1+ | Simulator V2 金额 | ✅ | P50=0%, P90=13%, Mean=24% |
+| 4.2 | Simulator V2 并发 | ✅ | 边际递减24.4%, 拥挤率68% |
 
 ### Gift Allocation - Phase 0-3 (已完成)
 
@@ -63,11 +68,22 @@
 
 ---
 
+## 🚨 已关闭方向 (不再继续)
+
+| 方向 | 原因 | 教训 |
+|------|------|------|
+| ~~延迟反馈建模~~ | 86.3%立即发生 | 先审计数据再建模 |
+| ~~两段式主排序~~ | Top-1% 35.7% vs 54.5% | 乘法放大误差 |
+| ~~凹收益替代Greedy~~ | Δ=-1.17% | 需配合真实约束 |
+| ~~多任务学习~~ | 极稀疏无优势 | 需更强结构 |
+
+---
+
 ## 本周重点
 
 | 优先级 | 任务 | 状态 | 验收标准 |
 |--------|------|------|----------|
-| 🔴 P0 | MVP-4.1 金额校准 | 🔴 就绪 | P50/P90误差<30% |
-| 🔴 P0 | MVP-4.2 并发容量 | 🔴 就绪 | 拥挤边际递减可观测 |
-| 🟡 P1 | MVP-4.3 召回-精排 | 🔴 就绪 | Top-1% ≥56% |
-| 🟡 P1 | MVP-4.4 供需匹配 | 🔴 就绪 | 收益+5% |
+| 🔴 P0 | MVP-5.1 召回-精排分工 | 🔴 就绪 | Top-1%≥56% & NDCG↑ |
+| 🔴 P0 | MVP-5.2 影子价格 | 🔴 就绪 | 收益+5%，约束统一 |
+| 🟡 P1 | MVP-5.3 鲸鱼分散 | ⏳ 计划 | 超载率<10%，Gini↓ |
+| 🟡 P1 | MVP-5.4 风险控制 | ⏳ 计划 | CVaR@5%改善 |

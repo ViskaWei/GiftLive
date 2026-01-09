@@ -1,6 +1,18 @@
 # 📌 Next Steps
 
-> **最后更新**: 2026-01-09
+> **最后更新**: 2026-01-09 | **战略转向**: 从"预测更准"转向"分配更对"
+
+---
+
+## 🚨 战略判断
+
+**不再继续的方向**（节省时间）：
+- ❌ 延迟反馈建模 — 86.3%礼物立即发生
+- ❌ 两段式作为主排序器 — Top-1% 35.7% vs 54.5%
+- ❌ 单纯凹收益 — 需配合真实约束才有效
+- ❌ 多任务学习 — 极稀疏场景无优势
+
+**主攻方向**：分配层优化（带约束、带外部性、带风险的资源分配）
 
 ---
 
@@ -8,9 +20,8 @@
 
 | # | 任务 | 状态 | 验收标准 | 备注 |
 |---|------|------|----------|------|
-| 1 | **MVP-4.1 Simulator V2 - 金额校准** | 🔴 就绪 | P50/P90误差<30% | 混合 Lognormal+Pareto 分位匹配 |
-| 2 | **MVP-4.2 Simulator V2 - 并发容量** | 🔴 就绪 | 拥挤边际递减可观测 | 加入 C_s 与惩罚函数 |
-| 3 | 编写 `scripts/simulator/simulator_v2.py` | ⏳ | 通过校准测试 | 继承 V1，加入新机制 |
+| 1 | **MVP-5.1 召回-精排分工** | 🔴 就绪 | Top-1%≥56% & NDCG↑ | Direct召回 + Stage2精排 |
+| 2 | **MVP-5.2 影子价格/供需匹配** | 🔴 就绪 | 收益+5% vs Greedy | Primal-Dual框架，多约束统一 |
 
 ---
 
@@ -18,10 +29,8 @@
 
 | # | 任务 | 状态 | 验收标准 | 备注 |
 |---|------|------|----------|------|
-| 1 | **MVP-4.3 召回-精排分工** | 🔴 就绪 | Top-1% ≥56% | Direct召回 + Stage2精排 |
-| 2 | **MVP-4.4 供需匹配/影子价格** | 🔴 就绪 | 收益+5% vs Greedy | 拉格朗日对偶分配 |
-| 3 | 编写 `scripts/train_recall_rerank.py` | ⏳ | 实验报告 | 召回-精排流水线 |
-| 4 | 编写 `scripts/simulator/policies_v2.py` | ⏳ | 包含影子价格策略 | 新分配策略实现 |
+| 1 | **MVP-5.3 鲸鱼分散 (b-matching)** | ⏳ | 超载率<10%, Gini↓ | 鲸鱼单独匹配层 |
+| 2 | **MVP-5.4 风险控制 (UCB/CVaR)** | ⏳ | CVaR@5%改善 | 降低策略波动 |
 
 ---
 
@@ -29,9 +38,7 @@
 
 | # | 任务 | 状态 | 验收标准 | 备注 |
 |---|------|------|----------|------|
-| 1 | MVP-4.5 鲸鱼分散 (b-matching) | ⏳ | 超载率<10% | 依赖 Simulator V2 |
-| 2 | MVP-4.6 不确定性排序 (UCB) | ⏳ | CVaR 改善 | 分位数回归或 ensemble |
-| 3 | MVP-4.7 多目标生态调度 | ⏳ | Pareto 前沿 | 权重扫描实验 |
+| 1 | **MVP-5.5 多目标生态调度** | ⏳ | Pareto前沿 | α权重扫描 |
 
 ---
 
@@ -52,28 +59,32 @@
 | 10 | MVP-2.1 凹收益分配 | 2026-01-08 | Δ=-1.17%无优势，DG3关闭 |
 | 11 | MVP-2.2 冷启动约束 | 2026-01-08 | 软约束+32%收益，Gate-2关闭 |
 | 12 | MVP-3.1 OPE验证 | 2026-01-08 | SNIPS RelErr<10%，Gate-3关闭 |
-| **Phase 4 立项** |||
-| 13 | Phase 4 立项书 | 2026-01-09 | [立项书](../gift_allocation/gift_allocation_phase4_charter.md) |
-| 14 | Hub/Roadmap 更新 | 2026-01-09 | 加入 Phase 4 预览 |
+| **Phase 4 (2 MVP)** |||
+| 13 | MVP-4.1+ Simulator V2金额 | 2026-01-09 | P50=0%, P90=13%, Mean=24% ✅ |
+| 14 | MVP-4.2 Simulator V2并发 | 2026-01-09 | 边际递减24.4%, 拥挤率68% ✅ |
+| **Phase 5 规划** |||
+| 15 | 战略梳理+立项 | 2026-01-09 | Hub更新，Roadmap创建 |
 
 ---
 
-## 📊 Phase 4 决策树
+## 📊 Phase 5 决策树
 
 ```
-MVP-4.1 + 4.2 (Simulator V2)
-    ├── If 金额校准误差<30% && 并发可观测 → Gate-4A 通过
-    │   ├── → MVP-4.4 供需匹配
-    │   └── → MVP-4.5 鲸鱼分散
-    └── Else → 调参迭代
-
-MVP-4.3 (召回-精排分工) [独立]
-    ├── If Top-1% ≥56% → Gate-4B 通过 → 采用分工架构
+MVP-5.1 (召回-精排分工)
+    ├── If Top-1%≥56% & NDCG↑ → Gate-5A PASS → 采用分工架构
     └── Else → 保留 Direct-only
 
-MVP-4.4 (供需匹配)
-    ├── If 收益≥+5% vs Greedy → Gate-4C 通过 → 替换 Greedy
+MVP-5.2 (影子价格)
+    ├── If 收益≥+5% & 约束满足 → Gate-5B PASS → 替换Greedy+规则
     └── Else → 保留 Greedy + 软约束
+
+MVP-5.3 (鲸鱼分散)
+    ├── If 超载率<10% & Gini↓ → Gate-5C PASS → 鲸鱼单独匹配
+    └── Else → 统一分配
+
+MVP-5.4 (风险控制)
+    ├── If CVaR改善 & 波动↓ → Gate-5D PASS → UCB/LCB
+    └── Else → 纯EV排序
 ```
 
 ---
@@ -82,32 +93,30 @@ MVP-4.4 (供需匹配)
 
 | 周 | 任务 | 产出 | 状态 |
 |----|------|------|------|
-| W1 | MVP-4.1 金额校准 | Simulator V2 (金额) | ⏳ |
-| W1-2 | MVP-4.2 并发容量 | Simulator V2 (完整) | ⏳ |
-| W2 | MVP-4.3 召回-精排 | Top-1%≥56% | ⏳ |
-| W3 | MVP-4.4 供需匹配 | 影子价格分配策略 | ⏳ |
-| W3-4 | MVP-4.5/4.6 鲸鱼+UCB | 辅助策略 | ⏳ |
-| W4 | MVP-4.7 多目标 | Pareto 前沿 | ⏳ |
-| W4 | Hub/Roadmap 更新 | Phase 4 闭环 | ⏳ |
+| W1 | MVP-5.1 召回-精排 | Top-1%≥56% & NDCG↑ | 🔴 就绪 |
+| W1-2 | MVP-5.2 影子价格 | 收益+5%，约束统一 | 🔴 就绪 |
+| W2 | MVP-5.3 鲸鱼分散 | 超载率<10% | ⏳ |
+| W2-3 | MVP-5.4 风险控制 | CVaR改善 | ⏳ |
+| W3 | MVP-5.5 多目标 | Pareto 前沿 | ⏳ |
 
 ---
 
 ## 📝 快速命令
 
-### 查看立项书
+### 查看 Roadmap
 ```bash
-cat gift_allocation/gift_allocation_phase4_charter.md
+cat gift_allocation/gift_allocation_roadmap.md
 ```
 
-### 查看当前状态
+### 查看 Hub
 ```bash
-cat status/kanban.md
+cat gift_allocation/gift_allocation_hub.md
 ```
 
-### 开始 MVP-4.1
+### 开始 MVP-5.1
 ```bash
-# 1. 创建 coding prompt
-# 2. 编写 simulator_v2.py
-# 3. 运行校准测试
+# 1. 创建 coding prompt: p 5.1
+# 2. 实现召回-精排流水线
+# 3. 评估 Top-1% 和 NDCG
 # 4. 更新实验报告
 ```
