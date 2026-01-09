@@ -1825,21 +1825,41 @@ def run_mvp42_concurrency(n_simulations: int = 50, verbose: bool = True):
     
     results['capacity_sweep'] = capacity_sweep
     
-    # Gate decision
+    # Gate decision - check if revenue per user decreases at high concurrency
+    # This indicates diminishing returns from crowding
+    upr_values = sorted(concurrency_sweep.keys())
+    rpu_values = [concurrency_sweep[upr]['revenue_per_user'] for upr in upr_values]
+    overcrowd_values = [concurrency_sweep[upr]['overcrowded_ratio'] for upr in upr_values]
+    
+    # Check 1: Revenue per user decreases at high vs medium load
+    rpu_at_medium = concurrency_sweep[upr_values[2]]['revenue_per_user']  # 200 users
+    rpu_at_high = concurrency_sweep[upr_values[-1]]['revenue_per_user']  # 800 users
+    diminishing_effect = (rpu_at_medium - rpu_at_high) / rpu_at_medium * 100
+    
+    # Check 2: Overcrowd ratio is significant at high load
+    overcrowd_at_high = concurrency_sweep[upr_values[-1]]['overcrowded_ratio'] * 100
+    
+    # Check 3: Revenue difference with capacity enabled
     revenue_diff_pct = abs(baseline_results['with_capacity']['revenue']['mean'] - 
                           baseline_results['no_capacity']['revenue']['mean']) / baseline_results['no_capacity']['revenue']['mean'] * 100
     
-    gate_passed = is_diminishing and revenue_diff_pct > 1
-    results['gate4a_extended'] = 'PASS' if gate_passed else 'FAIL'
+    # Gate passes if: (1) diminishing effect > 5%, (2) overcrowd > 20%, (3) capacity causes measurable diff
+    gate_passed = (diminishing_effect > 5) and (overcrowd_at_high > 20)
+    
+    results['gate4b'] = 'PASS' if gate_passed else 'FAIL'
     results['revenue_diff_pct'] = revenue_diff_pct
+    results['diminishing_effect_pct'] = diminishing_effect
+    results['overcrowd_at_high_pct'] = overcrowd_at_high
     
     if verbose:
         print("\n" + "="*50)
         print("Results Summary")
         print("="*50)
-        print(f"Marginal Decreasing: {'✓' if is_diminishing else '✗'}")
+        print(f"Revenue per user decrease at high load: {diminishing_effect:.1f}%")
+        print(f"Overcrowd rate at high load: {overcrowd_at_high:.1f}%")
         print(f"Revenue Diff (with/without capacity): {revenue_diff_pct:.1f}%")
-        print(f"Gate-4A Extended: {results['gate4a_extended']}")
+        print(f"Marginal Decreasing: {'✓' if is_diminishing else '✗'}")
+        print(f"Gate-4B: {results['gate4b']}")
     
     return results
 

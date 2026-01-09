@@ -76,6 +76,13 @@ class SimConfig:
     # Externality / diminishing returns
     gamma: float = 0.05
     
+    # MVP-4.2: Concurrency capacity model
+    enable_capacity: bool = False  # Enable capacity constraints
+    capacity_top10: int = 100      # Capacity for top 10% streamers
+    capacity_middle: int = 50      # Capacity for middle tier
+    capacity_tail: int = 20        # Capacity for tail streamers
+    crowding_penalty_alpha: float = 0.5  # Penalty strength when over capacity
+    
     # Random seed
     seed: int = 42
 
@@ -97,6 +104,9 @@ class Streamer:
     is_new: bool = False
     cumulative_revenue: float = 0.0
     n_big_donors: int = 0  # Number of big donors (for crowding effect)
+    # MVP-4.2: Concurrency capacity
+    capacity: int = 50  # Max concurrent users
+    n_current_users: int = 0  # Current concurrent users this round
 
 
 class UserPool:
@@ -172,12 +182,27 @@ class StreamerPool:
         is_new_flags = np.array([True] * n_new + [False] * (n - n_new))
         self.rng.shuffle(is_new_flags)
         
+        # Determine capacity based on popularity tier
+        popularity_ranks = np.argsort(popularity)[::-1]  # Descending
+        n_top10 = int(n * 0.1)
+        n_middle = int(n * 0.5)
+        
         for i in range(n):
+            # Assign capacity based on popularity tier
+            rank = np.where(popularity_ranks == i)[0][0]
+            if rank < n_top10:
+                capacity = self.config.capacity_top10
+            elif rank < n_top10 + n_middle:
+                capacity = self.config.capacity_middle
+            else:
+                capacity = self.config.capacity_tail
+            
             self.streamers.append(Streamer(
                 streamer_id=i,
                 content=contents[i],
                 popularity=popularity[i],
-                is_new=is_new_flags[i]
+                is_new=is_new_flags[i],
+                capacity=capacity
             ))
     
     def get_streamer(self, streamer_id: int) -> Streamer:
@@ -191,6 +216,12 @@ class StreamerPool:
         for s in self.streamers:
             s.cumulative_revenue = 0.0
             s.n_big_donors = 0
+            s.n_current_users = 0
+    
+    def reset_round_stats(self):
+        """Reset per-round stats (concurrent users)."""
+        for s in self.streamers:
+            s.n_current_users = 0
 
 
 class GiftModel:
@@ -338,9 +369,28 @@ class GiftModel:
         return amount
     
     def apply_diminishing_returns(self, amount: float, streamer: Streamer) -> float:
-        """Apply diminishing returns based on crowding."""
+        """Apply diminishing returns based on crowding and capacity (MVP-4.2)."""
         gamma = self.config.gamma
-        return amount / (1.0 + gamma * streamer.n_big_donors)
+        base_penalty = 1.0 / (1.0 + gamma * streamer.n_big_donors)
+        
+        # MVP-4.2: Capacity-based crowding penalty
+        if self.config.enable_capacity:
+            capacity_penalty = self._compute_capacity_penalty(streamer)
+            return amount * base_penalty * capacity_penalty
+        else:
+            return amount * base_penalty
+    
+    def _compute_capacity_penalty(self, streamer: Streamer) -> float:
+        """Compute penalty when streamer is over capacity.
+        
+        Penalty = 1.0 if n_current <= capacity
+        Penalty = 1 / (1 + alpha * (n_current - capacity) / capacity) otherwise
+        """
+        if streamer.n_current_users <= streamer.capacity:
+            return 1.0
+        else:
+            overflow_ratio = (streamer.n_current_users - streamer.capacity) / streamer.capacity
+            return 1.0 / (1.0 + self.config.crowding_penalty_alpha * overflow_ratio)
     
     def simulate_interaction(self, user: User, streamer: Streamer) -> Tuple[bool, float]:
         """Simulate a single user-streamer interaction.
@@ -463,6 +513,15 @@ class GiftLiveSimulator:
         """
         records = []
         
+        # MVP-4.2: Reset per-round concurrent user counts
+        if self.config.enable_capacity:
+            self.streamer_pool.reset_round_stats()
+            # Count concurrent users per streamer for this batch
+            from collections import Counter
+            allocation_counts = Counter(allocations)
+            for streamer_id, count in allocation_counts.items():
+                self.streamer_pool.get_streamer(streamer_id).n_current_users = count
+        
         for user, streamer_id in zip(users, allocations):
             streamer = self.streamer_pool.get_streamer(streamer_id)
             did_gift, amount = self.gift_model.simulate_interaction(user, streamer)
@@ -476,6 +535,13 @@ class GiftLiveSimulator:
                 'amount': amount,
                 'expected_value': self.gift_model.expected_value(user, streamer),
             }
+            
+            # MVP-4.2: Add capacity info to record
+            if self.config.enable_capacity:
+                record['streamer_capacity'] = streamer.capacity
+                record['n_concurrent'] = streamer.n_current_users
+                record['is_overcrowded'] = streamer.n_current_users > streamer.capacity
+            
             records.append(record)
             
             if update_cumulative and did_gift:
@@ -594,7 +660,7 @@ class GiftLiveSimulator:
         n_new_total = sum(1 for s in self.streamer_pool.streamers if s.is_new)
         cold_start_success_rate = n_new_with_gift / n_new_total if n_new_total > 0 else 0
         
-        return {
+        result = {
             'total_revenue': float(total_revenue),
             'n_gifts': int(n_gifts),
             'gift_rate': float(gift_rate),
@@ -610,6 +676,31 @@ class GiftLiveSimulator:
             'cold_start_success_rate': float(cold_start_success_rate),
             'new_streamer_revenue': float(new_streamer_revenue),
         }
+        
+        # MVP-4.2: Capacity metrics
+        if self.config.enable_capacity and 'is_overcrowded' in self.interaction_log[0]:
+            overcrowded = np.array([r.get('is_overcrowded', False) for r in self.interaction_log])
+            n_concurrent = np.array([r.get('n_concurrent', 0) for r in self.interaction_log])
+            
+            result['overcrowd_rate'] = float(overcrowded.mean())
+            result['avg_concurrent'] = float(n_concurrent.mean())
+            result['max_concurrent'] = int(n_concurrent.max())
+            
+            # Revenue from overcrowded vs normal interactions
+            amounts_overcrowded = amounts[overcrowded & did_gift]
+            amounts_normal = amounts[~overcrowded & did_gift]
+            
+            if len(amounts_overcrowded) > 0:
+                result['avg_amount_overcrowded'] = float(amounts_overcrowded.mean())
+            else:
+                result['avg_amount_overcrowded'] = 0.0
+            
+            if len(amounts_normal) > 0:
+                result['avg_amount_normal'] = float(amounts_normal.mean())
+            else:
+                result['avg_amount_normal'] = 0.0
+        
+        return result
     
     def _compute_gini(self, values: np.ndarray) -> float:
         """Compute Gini coefficient."""
