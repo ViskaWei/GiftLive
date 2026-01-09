@@ -81,6 +81,7 @@
 | EXP-10 | OPE Validation | 3.1 | [exp_ope_validation_20260108.md](./exp/exp_ope_validation_20260108.md) |
 | EXP-11 | Two-Stage Diagnosis | 1.4 | [exp_two_stage_diagnosis_20260108.md](./exp/exp_two_stage_diagnosis_20260108.md) |
 | EXP-13 | Delay Audit | 1.2-audit | [exp_delay_audit_20260108.md](./exp/exp_delay_audit_20260108.md) |
+| EXP-14 | Simulator V2 Enhanced | 4.1+ | [exp_simulator_v2_20260109.md](./exp/exp_simulator_v2_20260109.md) |
 
 ---
 
@@ -100,7 +101,7 @@ Phase 0-3 在**仿真器**中验证了分配策略，但仍缺乏对真实场景
 
 | MVP | 名称 | 优先级 | 状态 | 验收标准 |
 |-----|------|--------|------|----------|
-| 4.1 | Simulator V2 - 金额校准 | 🔴 P0 | ⏳ | P50/P90误差<30% |
+| 4.1+ | Simulator V2 - 增强版 | 🔴 P0 | 🔄 立项 | 离散档位+预算+社交+时序, P50/P90误差<30% |
 | 4.2 | Simulator V2 - 并发容量 | 🔴 P0 | ⏳ | 拥挤边际递减可观测 |
 | 4.3 | 召回-精排分工 | 🟡 P1 | ⏳ | Top-1% ≥56% |
 | 4.4 | 供需匹配/影子价格 | 🟡 P1 | ⏳ | 收益+5% vs Greedy |
