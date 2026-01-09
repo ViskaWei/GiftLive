@@ -1,6 +1,6 @@
 # 🗺️ Gift Allocation Roadmap
 
-> **Status:** ✅ Phase 0-3 完成 (12/13 MVP) | 📝 Phase 4 立项 (7 MVP) | **Data:** KuaiLive | **Date:** 2026-01-09
+> **Status:** ✅ Phase 0-3 完成 (12/13 MVP) | 🔄 Phase 4 进行中 (2/7 MVP) | **Data:** KuaiLive | **Date:** 2026-01-09
 
 ## 📋 MVP 总览
 
@@ -27,6 +27,8 @@
 | Gate-1 | 1.1~1.4, 1.2-audit, 1.3 | ✅ 完成 | 直接回归胜出；延迟/多任务无效 |
 | Gate-2 | 2.1, 2.2 | ✅ 关闭 | Greedy + 软约束冷启动 (λ=0.5) |
 | Gate-3 | 3.1 | ✅ 关闭 | SNIPS可用 (ε≥0.3, N≥5000) |
+| Gate-4A | 4.1+ | ✅ 通过 | V2+ 离散档位: P50=0%, P90=13%, Mean=24% |
+| Gate-4B | 4.2 | ✅ 通过 | 边际递减24.4%, 拥挤率68% @800用户 |
 
 ## 📊 核心数值
 
@@ -48,6 +50,12 @@
 | **评估性能** | SNIPS RelErr (Softmax) | 0.57% | 3.1 |
 | | SNIPS RelErr (Greedy) | 9.97% | 3.1 |
 | | Simulator Gini误差 | <5% | 0.3 |
+| **Simulator V2+** | V2+ P50误差 | 0% | 4.1+ |
+| | V2+ P90误差 | 13.2% | 4.1+ |
+| | V2+ Mean误差 | 24.0% | 4.1+ |
+| **并发容量** | Revenue/User下降 | 24.4% | 4.2 |
+| | 拥挤率@800用户 | 67.9% | 4.2 |
+| | 推荐惩罚强度β | 0.5 | 4.2 |
 
 ## 🏗️ 推荐架构
 
@@ -82,12 +90,14 @@
 | EXP-11 | Two-Stage Diagnosis | 1.4 | [exp_two_stage_diagnosis_20260108.md](./exp/exp_two_stage_diagnosis_20260108.md) |
 | EXP-13 | Delay Audit | 1.2-audit | [exp_delay_audit_20260108.md](./exp/exp_delay_audit_20260108.md) |
 | EXP-14 | Simulator V2 Amount | 4.1 | [exp_simulator_v2_amount_20260109.md](./exp/exp_simulator_v2_amount_20260109.md) |
+| EXP-14+ | Simulator V2 Enhanced | 4.1+ | [exp_simulator_v2_20260109.md](./exp/exp_simulator_v2_20260109.md) |
+| EXP-15 | Concurrency Capacity | 4.2 | [exp_concurrency_capacity_20260109.md](./exp/exp_concurrency_capacity_20260109.md) |
 
 ---
 
-## 🚀 Phase 4: 资源约束与生态健康 (立项中)
+## 🚀 Phase 4: 资源约束与生态健康 (进行中)
 
-> **Status:** 📝 立项 | **Date:** 2026-01-09 | **目标:** 解决真实场景的资源约束问题
+> **Status:** 🔄 进行中 (2/7 MVP) | **Date:** 2026-01-09 | **目标:** 解决真实场景的资源约束问题
 
 ### Phase 4 核心命题
 
@@ -127,5 +137,5 @@ Phase 0-3 在**仿真器**中验证了分配策略，但仍缺乏对真实场景
 |------|------|
 | [Hub](./gift_allocation_hub.md) | 核心结论、问题树 |
 | [Phase 4 立项](./gift_allocation_phase4_charter.md) | 下一阶段规划 |
-| [exp/](./exp/) | 12个实验报告 |
+| [exp/](./exp/) | 15个实验报告 |
 | [results/](./results/) | 数值结果JSON |
