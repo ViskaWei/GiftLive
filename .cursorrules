@@ -462,3 +462,4 @@ GPT 讨论 → session.md
 | `next` | 管理待办 | `status/next_steps.md` |
 | `report` | 生成报告 | `reports/drafts/` |
 | `session` | GPT 会话归档 | `experiments/[topic]/sessions/` |
+| `view <path>` | Markdown 预览 | 详见 `_backend/template/prompt/prompt_view.md` |
