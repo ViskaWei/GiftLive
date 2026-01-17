@@ -85,7 +85,7 @@ Gate：把分配问题当成"带约束、带外部性、带风险"的在线资�
 |--------|-----|------|------|
 | 🔴 P0 | MVP-5.1 召回-精排分工 | Gate-5A | ❌ FAIL (Top-1%=54.3%<56%) |
 | 🔴 P0 | MVP-5.2 影子价格 | Gate-5B | ❌ FAIL (收益+2.74%<5%) |
-| 🟡 P1 | MVP-5.3 鲸鱼分散 | Gate-5C | ⏳ |
+| 🟡 P1 | MVP-5.3 鲸鱼分散 | Gate-5C | 🔴 就绪 |
 
 ---
 
@@ -97,7 +97,7 @@ Gate：把分配问题当成"带约束、带外部性、带风险"的在线资�
 |-----|------|-------|------|------|--------|------|
 | 5.1 | 召回-精排分工 | 5 | Gate-5A | ❌ FAIL | EXP-20260109-gift-allocation-51 | [exp_recall_rerank_20260109.md](exp/exp_recall_rerank_20260109.md) |
 | 5.2 | 影子价格/供需匹配 | 5 | Gate-5B | ❌ FAIL | EXP-20260109-gift-allocation-16 | [exp_shadow_price_20260109.md](exp/exp_shadow_price_20260109.md) |
-| 5.3 | 鲸鱼分散 (b-matching) | 5 | Gate-5C | ⏳ | - | - |
+| 5.3 | 鲸鱼分散 (b-matching) | 5 | Gate-5C | ⏳ | EXP-20260109-gift-allocation-53 | [exp_whale_matching_20260109.md](exp/exp_whale_matching_20260109.md) |
 | 5.4 | 风险控制 (UCB/CVaR) | 5 | Gate-5D | ⏳ | - | - |
 | 5.5 | 多目标生态调度 | 5 | - | ⏳ | - | - |
 
