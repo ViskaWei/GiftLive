@@ -95,6 +95,7 @@ Gate：把分配问题当成"带约束、带外部性、带风险"的在线资�
 
 | MVP | 名称 | Phase | Gate | 状态 | exp_id | 报告 |
 |-----|------|-------|------|------|--------|------|
+| 0.1-Enhanced | 全方位 EDA (Comprehensive) | 0 | - | 🔄 | EXP-20260109-gift-allocation-02 | [exp_kuailive_eda_comprehensive_20260109.md](exp/exp_kuailive_eda_comprehensive_20260109.md) |
 | 5.1 | 召回-精排分工 | 5 | Gate-5A | ❌ FAIL | EXP-20260109-gift-allocation-51 | [exp_recall_rerank_20260109.md](exp/exp_recall_rerank_20260109.md) |
 | 5.2 | 影子价格/供需匹配 | 5 | Gate-5B | ❌ FAIL | EXP-20260109-gift-allocation-16 | [exp_shadow_price_20260109.md](exp/exp_shadow_price_20260109.md) |
 | 5.3 | 鲸鱼分散 (b-matching) | 5 | Gate-5C | ⏳ | EXP-20260109-gift-allocation-53 | [exp_whale_matching_20260109.md](exp/exp_whale_matching_20260109.md) |
@@ -107,6 +108,7 @@ Gate：把分配问题当成"带约束、带外部性、带风险"的在线资�
 
 | MVP | 数据 | 模型/策略 | 关键变量 | 验收指标 |
 |-----|------|----------|---------|---------|
+| 0.1-Enhanced | click/gift/user/streamer全量 | EDA分析 | Session构建、多维度分析 | 至少12张Hero图，可行动洞见 |
 | 5.1 | click全量 | Direct召回 + Stage2精排 | Top-M候选数 | Top-1%≥56%, NDCG@100↑ |
 | 5.2 | Simulator V2 | Primal-Dual分配 | λ_c约束价格 | 收益+5%, 约束满足 |
 | 5.3 | Simulator V2 | b-matching/min-cost flow | k鲸鱼上限 | 超载率<10%, Gini↓ |
@@ -116,6 +118,31 @@ Gate：把分配问题当成"带约束、带外部性、带风险"的在线资�
 ---
 
 # 3. 🔧 MVP规格
+
+## Phase 0: 数据探索（增强版）
+
+### MVP-0.1-Enhanced: 全方位 EDA (Comprehensive)
+
+| 项 | 配置 |
+|----|------|
+| **目标** | 对 KuaiLive 数据做"全方位、专业、可落地"的探索性数据分析，从用户行为、直播间供给、互动结构、时序规律、稀疏性/冷启动、异常与数据质量等多个维度挖出可行动的洞见 |
+| **动机** | 现有 EDA (MVP-0.1) 仅覆盖金额分布、集中度、稀疏性、时间模式，缺少 session 级分析、用户分群、供给侧质量、交互结构、异常检测等关键维度 |
+| **数据** | click.csv (4.9M), gift.csv (72K), user.csv (23K), streamer.csv (452K), room.csv (11.8M), comment.csv (196K), like.csv (179K), negative.csv (12.7M) |
+| **核心任务** | 1. Session 构建与转化漏斗分析<br>2. 用户二维象限（观看 vs 付费）<br>3. 主播二维象限（观看 vs 变现）<br>4. 用户-主播匹配结构（专一度、多样性）<br>5. 时序深度分析（7×24 热力图、峰值分解）<br>6. 异常检测（作弊/数据污染）<br>7. 数据质量评分 |
+| **关键输出** | 至少 12 张 Hero 图（每张图必须能"一眼得到结论"）+ 可执行的建模/产品建议 |
+| **验收** | 1. 所有"待执行"部分填充完成<br>2. 至少 12 张高质量图表<br>3. 至少 5 条可行动洞见<br>4. 数据质量评分表完整<br>5. 后续字段需求清单明确 |
+| **产出** | `exp_kuailive_eda_comprehensive_20260109.md`, 图表文件 `img/*.png`, 中间表 `results/sessions_*.csv` |
+
+**关键研究问题**：
+- H2.1: 打赏是"即时冲动"还是"随观看累积"？（首礼时间分布）
+- H2.2: 高观看低付费人群是否存在？规模多大？
+- H2.3: 主播供给是否存在"高吸引低变现"类型？
+- H2.4: 付费是否强绑定于特定主播？（用户专一度）
+- H2.5: 数据是否存在异常/作弊/污染？
+
+**图表生成任务**: 28 个任务（至少 12 个 P0 优先级），详见实验报告 §10.3
+
+---
 
 ## Phase 5: 分配优化
 
