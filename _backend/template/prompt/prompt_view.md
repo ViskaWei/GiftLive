@@ -7,13 +7,13 @@
 在浏览器中预览 Markdown 文件（GitHub 风格渲染）
 
 ### 工作流程
-1. 检查 grip 服务是否运行（端口 6419）
+1. 检查 md_server 服务是否运行（端口 6419）
    ```bash
-   ps aux | grep "grip.*6419" | grep -v grep
+   ps aux | grep "md_server.py.*6419" | grep -v grep
    ```
 2. 如未运行，启动服务：
    ```bash
-   cd /home/swei20/GiftLive && nohup grip 0.0.0.0:6419 > /tmp/grip.log 2>&1 &
+   cd /home/swei20/GiftLive && nohup python3 _backend/scripts/md_server.py 6419 > /tmp/md_server.log 2>&1 &
    ```
 3. 返回预览 URL
 
@@ -51,11 +51,17 @@
 ### 管理命令
 ```bash
 # 查看服务状态
-ps aux | grep grip
+ps aux | grep md_server.py
 
 # 查看日志
-tail -f /tmp/grip.log
+tail -f /tmp/md_server.log
 
 # 停止服务
-pkill -f "grip.*6419"
+pkill -f "md_server.py.*6419"
 ```
+
+### 特性
+- ✅ 支持 LaTeX 公式渲染（MathJax）
+- ✅ 代码语法高亮
+- ✅ GitHub 风格样式
+- ✅ 目录浏览功能

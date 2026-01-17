@@ -1,6 +1,6 @@
 # 🎁 GiftLive — 直播打赏预测与分配优化
 
-> **离线实验仓库** | 数据: KuaiLive | 状态: Phase 0-3 ✅ 完成 | Phase 5 🔄 进行中
+> **离线实验仓库** | 数据: KuaiLive | 状态: Phase 0-3 ✅ 完成 | Phase 5 🔄 进行中 | 💬 WeChat: Viska-
 
 ## A. 问题定义（核心）
 
@@ -181,7 +181,5 @@ GiftLive/
 ---
 
 ## 📬 Contact Me
-
-| 💬 WeChat | 📧 Email |
-|-----------|----------|
-| **Viska-** | **viskawei@gmail.com** |
+> 💬 WeChat:  **Viska-**  
+> 📧 Email: **viskawei@gmail.com** 

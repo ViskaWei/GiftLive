@@ -42,6 +42,10 @@ from .policies_shadow_price import (
     run_shadow_price_simulation,
 )
 
+from .policies_whale_matching import (
+    WhaleMatchingPolicy,
+)
+
 __all__ = [
     # Config
     'SimConfig',
@@ -81,4 +85,6 @@ __all__ = [
     'GreedyWithRulesPolicy',
     'evaluate_constraint_satisfaction',
     'run_shadow_price_simulation',
+    # Whale Matching (MVP-5.3)
+    'WhaleMatchingPolicy',
 ]
