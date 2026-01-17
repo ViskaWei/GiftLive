@@ -20,7 +20,11 @@ __pycache__/
 # IDE
 .idea/
 .vscode/
+.obsidian/
 *.swp
+
+# Local docs
+kuailive.pdf
 
 # OS
 .DS_Store
