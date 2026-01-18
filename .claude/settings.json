@@ -1,0 +1,59 @@
+{
+  "skills": {
+    "research-new-experiment": {
+      "path": ".claude/skills/research-new-experiment.md",
+      "description": "创建新实验计划。触发词：n, N, new, 新建, 立项",
+      "triggers": ["n", "N", "new", "新建", "立项"]
+    },
+    "research-update": {
+      "path": ".claude/skills/research-update.md",
+      "description": "更新实验文档。触发词：u, U, update, 更新。变体：u [experiment_id]（完整更新）, u hub [topic]（重写 hub）, u [关键词]（智能追加）",
+      "triggers": ["u", "U", "update", "更新"]
+    },
+    "research-status": {
+      "path": ".claude/skills/research-status.md",
+      "description": "查看项目状态，包括待办任务、归档队列和最近更新的文档。触发词：?, ？, status, 进度, 状态",
+      "triggers": ["?", "？", "status", "进度", "状态"]
+    },
+    "research-archive": {
+      "path": ".claude/skills/research-archive.md",
+      "description": "将原始实验结果归档为结构化 exp.md 报告。触发词：a, A, 归档, archive",
+      "triggers": ["a", "A", "归档", "archive"]
+    },
+    "research-next-steps": {
+      "path": ".claude/skills/research-next-steps.md",
+      "description": "管理下一步计划和待办清单。触发词：next, 下一步, 计划。变体：next add P0/P1 [描述], next done [序号/描述], next plan（AI 推荐）",
+      "triggers": ["next", "下一步", "计划"]
+    },
+    "research-coding-prompt": {
+      "path": ".claude/skills/research-coding-prompt.md",
+      "description": "从 MVP 规格生成可执行的 Coding Prompt。触发词：p, P, prompt, 生成prompt",
+      "triggers": ["p", "P", "prompt", "生成prompt"]
+    },
+    "research-session": {
+      "path": ".claude/skills/research-session.md",
+      "description": "将 GPT/Claude 会话归档为结构化实验计划。触发词：session, 会话, gpt",
+      "triggers": ["session", "会话", "gpt"]
+    },
+    "research-card": {
+      "path": ".claude/skills/research-card.md",
+      "description": "从多个实验中创建知识卡片。触发词：card, 卡片, kc",
+      "triggers": ["card", "卡片", "kc"]
+    },
+    "research-design-principles": {
+      "path": ".claude/skills/research-design-principles.md",
+      "description": "从 hub 文件中提取设计原则。触发词：design, 设计原则, 原则",
+      "triggers": ["design", "设计原则", "原则"]
+    },
+    "research-merge": {
+      "path": ".claude/skills/research-merge.md",
+      "description": "将多个相似实验合并为综合报告。触发词：merge, 合并, 整合",
+      "triggers": ["merge", "合并", "整合"]
+    },
+    "research-grow-topic": {
+      "path": ".claude/skills/research-grow-topic.md",
+      "description": "子节点生长命令。当一个子节点/子topic需要更深入理解和实验时，单独长出一个节点，生成配套文件结构，并移动相关文件。触发词：grow, 生长, 新建节点",
+      "triggers": ["grow", "生长", "新建节点"]
+    }
+  }
+}

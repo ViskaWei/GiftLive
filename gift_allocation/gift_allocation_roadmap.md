@@ -14,7 +14,7 @@ Gate：把分配问题当成"带约束、带外部性、带风险"的在线资�
 
 | Type | File |
 |------|------|
-| 🧠 Hub | [`gift_allocation_hub.md`](./gift_allocation_hub.md) |
+| 🧠 Hub | [`./gift_allocation_hub.md`](./gift_allocation_hub.md) |
 | 📋 Kanban | [`status/kanban.md`](../status/kanban.md) |
 | 📗 Experiments | [`exp/`](./exp/) |
 | 📊 Results | [`results/`](./results/) |
@@ -386,8 +386,8 @@ MVP-5.5                                   (Phase 0-3)
 
 | 类型 | 路径 |
 |------|------|
-| Roadmap | `gift_allocation_roadmap.md` |
-| Hub | `gift_allocation_hub.md` |
+| Roadmap | `../gift_EVmodel/gift_EVmodel_roadmap.md` |
+| Hub | `../gift_EVmodel/gift_EVmodel_hub.md` |
 | 图表 | `img/` |
 | 结果 | `results/` |
 

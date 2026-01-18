@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(xargs ls:*)",
+      "Bash(dmesg:*)",
+      "Bash(python scripts/train_leakage_free_baseline.py:*)",
+      "Bash(tee:*)",
+      "Bash(/home/swei20/anaconda3/bin/python:*)",
+      "Bash(source:*)",
+      "Bash(conda activate:*)",
+      "Bash(python -c:*)",
+      "Bash(kill:*)"
+    ]
+  }
+}

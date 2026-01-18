@@ -23,8 +23,8 @@
 
 | Type | Link |
 |------|------|
-| 🧠 Hub | `gift_allocation/gift_allocation_hub.md` § Q3.2 |
-| 🗺️ Roadmap | `gift_allocation/gift_allocation_roadmap.md` § MVP-0.3 |
+| 🧠 Hub | `../gift_EVmodel_hub.md` § Q3.2 |
+| 🗺️ Roadmap | `../gift_EVmodel_roadmap.md` § MVP-0.3 |
 
 ---
 # 1. 🎯 目标
@@ -203,7 +203,7 @@ $$Y|(\text{gift}=1) = \exp\left(\mu_0 + \mu_1 \log(w_u) + \mu_2 (p_u \cdot q_s) 
 |----|-----|
 | 脚本 | `scripts/run_simulator_experiments.py --mvp 0.3` |
 | Simulator | `scripts/simulator/simulator.py` |
-| Output | `gift_allocation/results/simulator_v1_20260108.json` |
+| Output | `../results/simulator_v1_20260108.json` |
 
 ```bash
 # 运行实验

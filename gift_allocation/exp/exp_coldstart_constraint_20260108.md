@@ -23,8 +23,8 @@
 
 | Type | Link |
 |------|------|
-| 🧠 Hub | `gift_allocation/gift_allocation_hub.md` § Q2.3 |
-| 🗺️ Roadmap | `gift_allocation/gift_allocation_roadmap.md` § MVP-2.2 |
+| 🧠 Hub | `../gift_EVmodel_hub.md` § Q2.3 |
+| 🗺️ Roadmap | `../gift_EVmodel_roadmap.md` § MVP-2.2 |
 
 ---
 # 1. 🎯 目标
@@ -229,7 +229,7 @@ $$\sum_u \mathbb{1}[u \to s] \geq \text{min\_alloc}, \quad \forall s \in \text{N
 |----|-----|
 | 脚本 | `scripts/run_simulator_experiments.py --mvp 2.2` |
 | Policies | `scripts/simulator/policies.py` |
-| Output | `gift_allocation/results/coldstart_constraint_20260108.json` |
+| Output | `../results/coldstart_constraint_20260108.json` |
 
 ```bash
 # 运行实验

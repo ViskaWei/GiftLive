@@ -11,8 +11,8 @@
 
 ## 🔗 上游追溯
 
-- **Hub**: `gift_allocation/gift_allocation_hub.md` § DG8
-- **Roadmap**: `gift_allocation/gift_allocation_roadmap.md` § MVP-5.3
+- **Hub**: `../gift_EVmodel_hub.md` § DG8
+- **Roadmap**: `../gift_EVmodel_roadmap.md` § MVP-5.3
 - **相关实验**: MVP-5.2 (影子价格), MVP-4.2 (并发容量)
 
 ---

@@ -24,8 +24,8 @@
 
 | Type | Link |
 |------|------|
-| 🧠 Hub | `gift_allocation_hub.md` § DG3, Q2.1 |
-| 🗺️ Roadmap | `gift_allocation_roadmap.md` § MVP-2.1 |
+| 🧠 Hub | `gift_EVmodel_hub.md` § DG3, Q2.1 |
+| 🗺️ Roadmap | `gift_EVmodel_roadmap.md` § MVP-2.1 |
 
 ---
 # 1. 🎯 目标
@@ -254,8 +254,8 @@ $$s^* = \arg\max_s g'(V_s) \cdot v_{u,s}$$
 |----|-----|
 | 脚本 | `scripts/train_concave_allocation.py` |
 | 日志 | `logs/mvp21_concave_allocation_20260108.log` |
-| 结果 | `gift_allocation/results/concave_allocation_20260108.json` |
-| 图表 | `gift_allocation/img/mvp21_*.png` |
+| 结果 | `../results/concave_allocation_20260108.json` |
+| 图表 | `../img/mvp21_*.png` |
 
 ```bash
 # 运行实验

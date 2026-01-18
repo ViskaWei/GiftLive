@@ -12,8 +12,8 @@
 ## 🔗 上游追溯
 
 - **Coding Prompt**: `gift_allocation/prompts/coding_prompt_mvp52_shadow_price_20260109.md`
-- **Hub**: `gift_allocation/gift_allocation_hub.md`
-- **Roadmap**: `gift_allocation/gift_allocation_roadmap.md`
+- **Hub**: `../gift_EVmodel_hub.md`
+- **Roadmap**: `../gift_EVmodel_roadmap.md`
 
 ---
 
@@ -261,7 +261,7 @@ policies:
 
 - **Shadow Price Allocator**: `scripts/simulator/policies_shadow_price.py`
 - **Experiment Script**: `scripts/train_shadow_price.py`
-- **Results JSON**: `gift_allocation/results/shadow_price_20260109.json`
+- **Results JSON**: `../results/shadow_price_20260109.json`
 
 ### C. 运行环境
 
