@@ -1,6 +1,6 @@
 # 🤖 Coding Prompt: KuaiLive 全方位探索性数据分析（Comprehensive EDA）
 
-> **Experiment ID:** `EXP-20260109-gift-allocation-02`  
+> **Experiment ID:** `EXP-20260109-kuailive-02`  
 > **MVP:** MVP-0.1-Enhanced  
 > **Date:** 2026-01-09  
 > **Author:** Viska Wei
@@ -149,42 +149,42 @@ metrics:
 
 | 图号 | 图表类型 | X轴 | Y轴 | 分群/标注 | 保存路径 | 问题 |
 |------|---------|-----|-----|---------|---------|------|
-| **Fig 2.1** | line | Date | Sample Count | click vs gift | `gift_allocation/img/time_coverage.png` | 时间覆盖 & 缺天 |
-| **Fig 2.2** | histogram | watch_live_time | Count | 负值/0占比标注 | `gift_allocation/img/watch_time_anomaly.png` | watch_time 异常分布 |
-| **Fig 3.1** | histogram | t_first_gift / session_duration | Count | - | `gift_allocation/img/first_gift_time_ratio.png` | 首礼时间相对 session 的分布 |
-| **Fig 3.2** | scatter | watch_time (log) | t_first_gift (log) | - | `gift_allocation/img/first_gift_vs_watch.png` | 首礼时间 vs 观看时长 |
-| **Fig 3.3** | CCDF | session_duration | P(session_duration > x) | P50/P90/P99标注 | `gift_allocation/img/session_duration_ccdf.png` | Session 时长分布 |
-| **Fig 3.5** | bar | Step | Conversion Rate (%) | click→session→gift_session→multi_gift | `gift_allocation/img/conversion_funnel.png` | 转化漏斗 |
-| **Fig 4.1** | CCDF | total_watch_time (log) | P(watch_time > x) (log) | - | `gift_allocation/img/user_watch_time_ccdf.png` | 用户观看时长分布 |
-| **Fig 4.3** | bar | Metric Type | Conversion Rate (%) | A/B/C 三套口径 | `gift_allocation/img/conversion_funnel_multi.png` | 转化漏斗（多口径） |
-| **Fig 4.4** | scatter | total_watch_time (log) | total_gift_amount (log) | 四象限占比标注 | `gift_allocation/img/user_quadrant.png` | 用户二维象限 |
-| **Fig 4.5** | line | watch_time_bin | gift_rate | 置信区间 | `gift_allocation/img/watch_time_vs_gift_rate.png` | watch_time 分位数分箱的 gift_rate |
-| **Fig 4.8** | bar | gift_price | Count + Cumulative Share | Top 20 价位点 | `gift_allocation/img/gift_price_tiers.png` | 付费价位阶梯 |
-| **Fig 5.1** | CCDF | total_watch_time (log) | P(watch_time > x) (log) | - | `gift_allocation/img/streamer_watch_time_ccdf.png` | 主播观看时长分布 |
-| **Fig 5.2** | histogram | revenue_per_watch_hour (log) | Count | - | `gift_allocation/img/streamer_conversion_efficiency.png` | 主播转化效率分布 |
-| **Fig 5.3** | scatter | total_watch_time (log) | total_revenue (log) | 四象限占比标注 | `gift_allocation/img/streamer_quadrant_revenue.png` | 主播二维象限（观看时长 vs 收入） |
-| **Fig 5.4** | scatter | unique_viewers (log) | conversion_rate (log) | 四象限占比标注 | `gift_allocation/img/streamer_quadrant_conversion.png` | 主播二维象限（观看用户数 vs 转化率） |
-| **Fig 6.3** | histogram | loyalty | Count | watch 与 gift 两套 | `gift_allocation/img/user_loyalty_dist.png` | 用户专一度分布 |
-| **Fig 7.1** | heatmap | Hour × Day of Week | watch_time / gift_amount / conversion_rate | 三张并排或关键两张 | `gift_allocation/img/hour_dow_heatmap.png` | 7×24 热力图 |
-| **Fig 8.1** | scatter | gift_interval | gift_amount | 可疑区域标注 | `gift_allocation/img/anomaly_rules.png` | 异常规则可视化 |
+| **Fig 2.1** | line | Date | Sample Count | click vs gift | `img/time_coverage.png` | 时间覆盖 & 缺天 |
+| **Fig 2.2** | histogram | watch_live_time | Count | 负值/0占比标注 | `img/watch_time_anomaly.png` | watch_time 异常分布 |
+| **Fig 3.1** | histogram | t_first_gift / session_duration | Count | - | `img/first_gift_time_ratio.png` | 首礼时间相对 session 的分布 |
+| **Fig 3.2** | scatter | watch_time (log) | t_first_gift (log) | - | `img/first_gift_vs_watch.png` | 首礼时间 vs 观看时长 |
+| **Fig 3.3** | CCDF | session_duration | P(session_duration > x) | P50/P90/P99标注 | `img/session_duration_ccdf.png` | Session 时长分布 |
+| **Fig 3.5** | bar | Step | Conversion Rate (%) | click→session→gift_session→multi_gift | `img/conversion_funnel.png` | 转化漏斗 |
+| **Fig 4.1** | CCDF | total_watch_time (log) | P(watch_time > x) (log) | - | `img/user_watch_time_ccdf.png` | 用户观看时长分布 |
+| **Fig 4.3** | bar | Metric Type | Conversion Rate (%) | A/B/C 三套口径 | `img/conversion_funnel_multi.png` | 转化漏斗（多口径） |
+| **Fig 4.4** | scatter | total_watch_time (log) | total_gift_amount (log) | 四象限占比标注 | `img/user_quadrant.png` | 用户二维象限 |
+| **Fig 4.5** | line | watch_time_bin | gift_rate | 置信区间 | `img/watch_time_vs_gift_rate.png` | watch_time 分位数分箱的 gift_rate |
+| **Fig 4.8** | bar | gift_price | Count + Cumulative Share | Top 20 价位点 | `img/gift_price_tiers.png` | 付费价位阶梯 |
+| **Fig 5.1** | CCDF | total_watch_time (log) | P(watch_time > x) (log) | - | `img/streamer_watch_time_ccdf.png` | 主播观看时长分布 |
+| **Fig 5.2** | histogram | revenue_per_watch_hour (log) | Count | - | `img/streamer_conversion_efficiency.png` | 主播转化效率分布 |
+| **Fig 5.3** | scatter | total_watch_time (log) | total_revenue (log) | 四象限占比标注 | `img/streamer_quadrant_revenue.png` | 主播二维象限（观看时长 vs 收入） |
+| **Fig 5.4** | scatter | unique_viewers (log) | conversion_rate (log) | 四象限占比标注 | `img/streamer_quadrant_conversion.png` | 主播二维象限（观看用户数 vs 转化率） |
+| **Fig 6.3** | histogram | loyalty | Count | watch 与 gift 两套 | `img/user_loyalty_dist.png` | 用户专一度分布 |
+| **Fig 7.1** | heatmap | Hour × Day of Week | watch_time / gift_amount / conversion_rate | 三张并排或关键两张 | `img/hour_dow_heatmap.png` | 7×24 热力图 |
+| **Fig 8.1** | scatter | gift_interval | gift_amount | 可疑区域标注 | `img/anomaly_rules.png` | 异常规则可视化 |
 
 ### P1 优先级图表（可选，但建议完成）
 
 | 图号 | 图表类型 | X轴 | Y轴 | 保存路径 |
 |------|---------|-----|-----|---------|
-| **Fig 3.4** | histogram | gift_interval (log-x) | Count | `gift_allocation/img/gift_interval_dist.png` |
-| **Fig 4.2** | histogram | sessions_per_user | Count | `gift_allocation/img/user_sessions_dist.png` |
-| **Fig 4.6** | bar | Streamer | Watch Count | Top 20 | `gift_allocation/img/high_watch_low_pay_streamers.png` |
-| **Fig 4.7** | line | Days | Retention Rate (%) | 付费 vs 非付费 | `gift_allocation/img/retention_by_payment.png` |
-| **Fig 4.9** | histogram | gift_interval | Count | `gift_allocation/img/gift_interval_dist.png` |
-| **Fig 4.10** | histogram | days_between_gifts | Count | `gift_allocation/img/repurchase_cycle.png` |
-| **Fig 5.5** | boxplot | Exposure Tier | revenue_per_watch_hour | `gift_allocation/img/streamer_coldstart_tiers.png` |
-| **Fig 6.1** | histogram | Degree (log-log) | Count | watch vs gift | `gift_allocation/img/user_degree_dist.png` |
-| **Fig 6.2** | histogram | Degree (log-log) | Count | watch vs gift | `gift_allocation/img/streamer_degree_dist.png` |
-| **Fig 6.4** | combo | Streamer Rank | Cumulative Share + Top1 User % | Lorenz + 散点 | `gift_allocation/img/streamer_revenue_concentration.png` |
-| **Fig 6.5** | histogram | entropy | Count | - | `gift_allocation/img/user_diversity_entropy.png` |
-| **Fig 7.2** | stacked area | Date | Contribution | Top N 主播 | `gift_allocation/img/peak_contribution.png` |
-| **Fig 8.2** | histogram | Edge Weight | Count | watch vs gift | `gift_allocation/img/edge_weight_comparison.png` |
+| **Fig 3.4** | histogram | gift_interval (log-x) | Count | `img/gift_interval_dist.png` |
+| **Fig 4.2** | histogram | sessions_per_user | Count | `img/user_sessions_dist.png` |
+| **Fig 4.6** | bar | Streamer | Watch Count | Top 20 | `img/high_watch_low_pay_streamers.png` |
+| **Fig 4.7** | line | Days | Retention Rate (%) | 付费 vs 非付费 | `img/retention_by_payment.png` |
+| **Fig 4.9** | histogram | gift_interval | Count | `img/gift_interval_dist.png` |
+| **Fig 4.10** | histogram | days_between_gifts | Count | `img/repurchase_cycle.png` |
+| **Fig 5.5** | boxplot | Exposure Tier | revenue_per_watch_hour | `img/streamer_coldstart_tiers.png` |
+| **Fig 6.1** | histogram | Degree (log-log) | Count | watch vs gift | `img/user_degree_dist.png` |
+| **Fig 6.2** | histogram | Degree (log-log) | Count | watch vs gift | `img/streamer_degree_dist.png` |
+| **Fig 6.4** | combo | Streamer Rank | Cumulative Share + Top1 User % | Lorenz + 散点 | `img/streamer_revenue_concentration.png` |
+| **Fig 6.5** | histogram | entropy | Count | - | `img/user_diversity_entropy.png` |
+| **Fig 7.2** | stacked area | Date | Contribution | Top N 主播 | `img/peak_contribution.png` |
+| **Fig 8.2** | histogram | Edge Weight | Count | watch vs gift | `img/edge_weight_comparison.png` |
 
 ---
 
@@ -221,7 +221,7 @@ metrics:
 ## 5. 📝 最终交付物
 
 ### 5.1 实验报告
-- **路径**: `gift_allocation/exp/exp_kuailive_eda_comprehensive_20260109.md`
+- **路径**: `exp/exp_kuailive_eda_comprehensive_20260109.md`
 - **模板**: `_backend/template/exp.md`
 - **必须包含**:
   - ⚡ 核心结论速览（一句话 + 关键数字 + 5-8 条洞见）
@@ -230,17 +230,17 @@ metrics:
   - **所有"待执行"部分必须填充完成**
 
 ### 5.2 图表文件
-- **路径**: `gift_allocation/img/`
+- **路径**: `img/`
 - **命名**: 如上表所述（如 `time_coverage.png`, `first_gift_time_ratio.png` 等）
 - **要求**: 至少 12 张 P0 优先级图表，每张图能"一眼得到结论"
 
 ### 5.3 中间表
-- **Session 表**: `gift_allocation/results/sessions_*.csv` 或 `gift_allocation/results/sessions_*.parquet`
+- **Session 表**: `results/sessions_*.csv` 或 `results/sessions_*.parquet`
 - **Schema**: 见实验报告 §10.2
 
 ### 5.4 数值结果
 - **格式**: JSON
-- **路径**: `gift_allocation/results/eda_comprehensive_stats_20260109.json`
+- **路径**: `results/eda_comprehensive_stats_20260109.json`
 - **内容**:
 ```json
 {
@@ -292,8 +292,8 @@ metrics:
 
 | 目标文件 | 更新内容 | 章节 |
 |---------|---------|------|
-| `gift_allocation_roadmap.md` | MVP-0.1-Enhanced 状态 ✅ + 结论快照 | §2.1, §4.3 |
-| `gift_allocation_hub.md` | 新洞见（如有重要发现）→ §4 洞见汇合<br>新设计原则（如有）→ §6 设计原则 | §4, §6 |
+| `kuailive_roadmap.md` | MVP-0.1-Enhanced 状态 ✅ + 结论快照 | §2.1, §4.3 |
+| `kuailive_hub.md` | 新洞见（如有重要发现）→ §4 洞见汇合<br>新设计原则（如有）→ §6 设计原则 | §4, §6 |
 
 ---
 
@@ -383,8 +383,8 @@ metrics:
 4. ✅ 按顺序执行：数据质量检查 → Session 构建 → 多维度分析 → 图表生成
 5. ✅ 复用已有函数，扩展新功能
 6. ✅ 每张图必须能"一眼得到结论"（标题是结论句，标注关键数字）
-7. ✅ 所有图表保存到 `gift_allocation/img/`
-8. ✅ 数值结果保存为 JSON 到 `gift_allocation/results/`
+7. ✅ 所有图表保存到 `img/`
+8. ✅ 数值结果保存为 JSON 到 `results/`
 9. ✅ 填充实验报告所有"待执行"部分
 10. ✅ 完成后同步更新 roadmap.md 和 hub.md（如有重要发现）
 -->

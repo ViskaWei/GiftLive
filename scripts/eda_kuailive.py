@@ -30,9 +30,9 @@ plt.rcParams['font.size'] = 10
 
 # Paths
 DATA_DIR = Path("/home/swei20/GiftLive/data/KuaiLive")
-OUTPUT_DIR = Path("/home/swei20/GiftLive/experiments/gift_allocation")
+OUTPUT_DIR = Path("/home/swei20/GiftLive/KuaiLive")
 IMG_DIR = OUTPUT_DIR / "img"
-RESULTS_DIR = OUTPUT_DIR / "results"
+RESULTS_DIR = Path("/home/swei20/GiftLive/gift_allocation/results")
 
 def compute_gini(values):
     """Compute Gini coefficient from array of values."""

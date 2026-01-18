@@ -1,0 +1,195 @@
+{
+  "experiment_id": "EXP-20260109-gift-allocation-02",
+  "date": "2026-01-17 22:45:52",
+  "data_quality": {
+    "completeness": 5.0,
+    "consistency": 5.0,
+    "validity": 5.0,
+    "timeliness": 5.0,
+    "overall_score": 5.0
+  },
+  "session_stats": {
+    "total_sessions": 4293908,
+    "avg_session_duration": 513919.7312185077,
+    "session_duration_p50_p90_p99": [
+      4871.0,
+      1025881.8000000017,
+      9230950.369999968
+    ],
+    "session_conversion_rate": 0.015693862094856247,
+    "immediate_gift_rate": 0.90357333649908
+  },
+  "phase3_session_funnel": {
+    "first_gift_ratio": {
+      "mean": -2.455750918399252,
+      "median": 0.0,
+      "p10": 0.0,
+      "p90": 0.015718726455490932,
+      "immediate_rate": 0.90357333649908
+    },
+    "session_duration": {
+      "mean": 513.9197312185075,
+      "median": 4.871,
+      "p50": 4.871,
+      "p90": 1025.8818000000017,
+      "p99": 9230.950369999968
+    },
+    "funnel": {
+      "click_to_session": 0.8746094064281299,
+      "session_to_gift": 0.015693862094856247,
+      "gift_to_multi": 0.023535347539621297,
+      "click_to_gift": 0.01372599941134715
+    }
+  },
+  "phase4_user_behavior": {
+    "user_watch_time": {
+      "mean": 17051943.57088171,
+      "median": 8115449.0,
+      "p50": 8115449.0,
+      "p90": 41745298.2,
+      "p99": 127350175.34000048
+    },
+    "user_quadrant": {
+      "high_watch_high_pay": 1765,
+      "low_watch_high_pay": 4046,
+      "low_watch_low_pay": 13783,
+      "high_watch_low_pay": 4178,
+      "high_watch_low_pay_ratio": 0.1757529867070503
+    },
+    "watch_time_vs_gift_rate": {
+      "bins": [
+        19461.0,
+        3089355.75,
+        8115449.0,
+        20252815.75,
+        41745298.2,
+        62842209.40000001,
+        127350175.34000048,
+        472947643.0
+      ],
+      "gift_rates": [
+        0.9690392057883224,
+        0.9784620562005721,
+        0.9729093050647821,
+        0.979523141654979,
+        0.9831791421362489,
+        0.9873817034700315,
+        0.9915966386554622
+      ]
+    },
+    "gift_price_tiers": {
+      "top_20_prices": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "top_20_counts": [
+        31882,
+        7858,
+        3176,
+        1967,
+        2499,
+        1150,
+        886,
+        630,
+        627,
+        4654,
+        868,
+        583,
+        318,
+        307,
+        231,
+        209,
+        155,
+        132,
+        143,
+        1506
+      ],
+      "top_20_cumulative_share": [
+        0.43886793491727005,
+        0.5470363130798668,
+        0.5907551689012471,
+        0.6178316768989346,
+        0.6522313685543595,
+        0.66806155879195,
+        0.6802576879663024,
+        0.6889298791399389,
+        0.6975607741651295,
+        0.7616248657875175,
+        0.7735732180711946,
+        0.7815984362525121,
+        0.7859758279877763,
+        0.7902018005120722,
+        0.7933816039424056,
+        0.7962585689508025,
+        0.7983922032871734,
+        0.8002092338187925,
+        0.8021776835613799,
+        0.8229083500812158
+      ]
+    }
+  },
+  "phase5_supply_side": {
+    "streamer_watch_time": {
+      "mean": 895581.0768103999,
+      "median": 24090.0,
+      "p50": 24090.0,
+      "p90": 1205722.0,
+      "p99": 13386836.999999974
+    },
+    "conversion_efficiency": {
+      "mean_conversion_rate": 0.07612550014250333,
+      "median_revenue_per_watch_hour": 0.0,
+      "p50_revenue_per_watch_hour": 0.0,
+      "p90_revenue_per_watch_hour": 0.0
+    },
+    "streamer_quadrant": {
+      "high_watch_high_revenue": 30615,
+      "low_watch_high_revenue": 3841,
+      "low_watch_low_revenue": 335625,
+      "high_watch_low_revenue": 82540,
+      "high_watch_low_revenue_ratio": 0.18236007609015048
+    }
+  },
+  "phase6_interaction": {
+    "user_loyalty": {
+      "watch_loyalty_p50": 0.35565776344843836,
+      "watch_loyalty_p90": 0.812317166809214,
+      "gift_loyalty_p50": 1.0,
+      "gift_loyalty_p90": 1.0
+    }
+  },
+  "phase7_temporal": {
+    "temporal": {
+      "peak_hour": 13,
+      "peak_dow": 2
+    }
+  },
+  "phase8_anomaly": {
+    "suspicious_users": {
+      "count": 4,
+      "ratio": 5.935774915415207e-05
+    },
+    "suspicious_intervals": {
+      "count": 5,
+      "ratio": 6.882691407648046e-05
+    }
+  }
+}

@@ -32,6 +32,7 @@
 | `next` | 管理待办 | `status/next_steps.md` |
 | `report` | 生成报告 | `reports/drafts/` |
 | `session` | GPT 会话归档 | `experiments/[topic]/sessions/` |
+| `grow <new_topic> <parent_topic>` | 子节点生长 | `[new_topic]/` |
 
 ---
 
@@ -293,6 +294,72 @@ AI: 🔄 合并实验...
     📁 找到 3 个相关实验
     ✅ 已创建: experiments/model/exp_model_consolidated_20250108.md
 ```
+
+---
+
+### 🌱 子节点生长
+```
+触发词: grow | 生长 | 新建节点
+变体: grow <new_topic> <parent_topic> [--keyword] [--insights]
+```
+
+**用途**: 当一个子节点/子topic需要更深入理解和实验时，单独长出一个节点，生成配套文件结构，并移动相关文件。
+
+**工作流程**:
+1. 查找父 topic 下包含关键词的实验和 prompt 文件
+2. 创建新 topic 目录结构（exp/, prompts/, img/, results/, models/）
+3. 生成 hub.md 和 roadmap.md（基于模板）
+4. 移动相关文件到新 topic 目录
+5. 更新所有受影响的超链接
+
+**示例**:
+```
+用户: grow kuailive gift_allocation
+
+AI: 🌱 Grow Topic: kuailive (from gift_allocation)
+    
+    📋 Step 1: 查找相关文件...
+       找到 2 个实验文件
+         - exp_kuailive_eda_20260108.md
+         - exp_kuailive_eda_comprehensive_20260109.md
+       找到 1 个 prompt 文件
+         - coding_prompt_comprehensive_eda_20260109.md
+    
+    📁 Step 2: 创建目录结构...
+    ✅ 已创建目录结构: KuaiLive/
+    
+    📝 Step 3: 创建 hub.md...
+    ✅ 已创建: KuaiLive/kuailive_hub.md
+    
+    📝 Step 4: 创建 roadmap.md...
+    ✅ 已创建: KuaiLive/kuailive_roadmap.md
+    
+    📦 Step 5: 移动实验文件...
+    ✅ 已移动: exp_kuailive_eda_20260108.md → KuaiLive/exp/
+    ✅ 已移动: exp_kuailive_eda_comprehensive_20260109.md → KuaiLive/exp/
+    
+    📦 Step 6: 移动 prompt 文件...
+    ✅ 已移动: coding_prompt_comprehensive_eda_20260109.md → KuaiLive/prompts/
+    
+    🔗 Step 7: 更新所有受影响的链接...
+    ✅ 已更新链接: KuaiLive/exp/exp_kuailive_eda_20260108.md
+    ✅ 已更新链接: gift_allocation/gift_allocation_roadmap.md
+    ...
+    
+    ✅ 完成！新 topic 'kuailive' 已创建
+```
+
+**参数说明**:
+- `new_topic`: 新 topic 名称（如 `kuailive`）
+- `parent_topic`: 父 topic 名称（如 `gift_allocation`）
+- `--keyword`: 用于匹配文件的关键词（默认使用 new_topic）
+- `--insights`: Hub 文件中的 insights 内容（可选）
+- `--dry-run`: 预览模式，不实际执行
+
+**注意事项**:
+- 新 topic 可以是顶层目录（如 `gift_allocation`）或 `experiments/` 下的子目录
+- 移动文件后会自动更新所有相关链接
+- 建议先使用 `--dry-run` 预览操作
 
 ---
 

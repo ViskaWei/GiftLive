@@ -368,6 +368,48 @@ echo $! > logs/exp_id.pid
 - ✅ **只写参考代码路径**，让执行 Agent 自己读取并理解
 - ✅ **确保参考代码路径存在**
 
+## 🌱 子节点生长 (Grow Topic)
+
+### 触发词
+- `grow` / `生长` / `新建节点`
+
+### 用途
+当一个子节点/子topic（比如 kuailive eda）需要更深入理解和实验时，单独长出一个节点，生成配套文件结构，并移动相关文件。
+
+### 工作流程
+1. **解析参数**: 提取新 topic 名称、父 topic 名称、关键词（可选）
+2. **查找相关文件**: 在父 topic 下查找包含关键词的实验和 prompt 文件
+3. **创建目录结构**: 创建新 topic 目录（exp/, prompts/, img/, results/, models/）
+4. **生成核心文件**: 
+   - 创建 `[new_topic]_hub.md`（基于模板）
+   - 创建 `[new_topic]_roadmap.md`（基于模板）
+5. **移动文件**: 将相关实验和 prompt 文件移动到新 topic 目录
+6. **更新链接**: 更新所有受影响的超链接（hub、roadmap、exp 文件等）
+
+### 执行方式
+- **AI 执行**: 直接调用 `_backend/scripts/grow_topic.py`
+- **命令行**: `python _backend/scripts/grow_topic.py <new_topic> <parent_topic> [--keyword] [--insights] [--dry-run]`
+
+### 示例
+```
+用户: grow kuailive gift_allocation
+
+AI: 🌱 Grow Topic: kuailive (from gift_allocation)
+    📋 找到 2 个实验文件
+    📁 创建目录结构...
+    📝 创建 hub.md...
+    📝 创建 roadmap.md...
+    📦 移动实验文件...
+    🔗 更新所有链接...
+    ✅ 完成！
+```
+
+### 注意事项
+- 新 topic 可以是顶层目录（如 `gift_allocation`）或 `experiments/` 下的子目录
+- 关键词默认为新 topic 名称，可用于匹配实验文件名或内容
+- 支持 `--dry-run` 模式预览操作
+- 移动文件后会自动更新所有相关链接
+
 ## 💬 GPT 会话归档
 
 ### 触发词
@@ -463,3 +505,4 @@ GPT 讨论 → session.md
 | `report` | 生成报告 | `reports/drafts/` |
 | `session` | GPT 会话归档 | `experiments/[topic]/sessions/` |
 | `view <path>` | Markdown 预览 | 详见 `_backend/template/prompt/prompt_view.md` |
+| `grow <new_topic> <parent_topic>` | 子节点生长 | 详见 `_backend/scripts/grow_topic.py` |

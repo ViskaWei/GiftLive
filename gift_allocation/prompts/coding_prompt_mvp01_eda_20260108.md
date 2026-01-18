@@ -131,7 +131,7 @@ analysis:
 ## 5. 📝 最终交付物
 
 ### 5.1 实验报告
-- **路径**: `experiments/gift_allocation/exp_kuailive_eda_20260108.md`
+- **路径**: `../KuaiLive/exp/exp_kuailive_eda_20260108.md`
 - **模板**: `_backend/template/exp.md`
 - **必须包含**:
   - ⚡ 核心结论速览（打赏率、Gini 系数、关键分布特征）

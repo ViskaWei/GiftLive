@@ -122,7 +122,7 @@ Legend: ✅ 已验证 | ❌ 已否定 | ⏳ 待验证
 
 | MVP | 🔗 | 状态 | 关键结论 |
 |-----|------|------|---------|
-| 0.1 | [KuaiLive EDA](gift_allocation/exp/exp_kuailive_eda_20260108.md) | ✅ | Gini=0.94, 两段式建模必要性确认 |
+| 0.1 | [KuaiLive EDA](KuaiLive/exp/exp_kuailive_eda_20260108.md) | ✅ | Gini=0.94, 两段式建模必要性确认 |
 | 0.2 | [Baseline](gift_allocation/exp/exp_baseline_20260108.md) | ✅ | Top-1%=56.2%, 交互特征主导 |
 | 0.3 | [Simulator V1](gift_allocation/exp/exp_simulator_v1_20260108.md) | ✅ | Gini误差<5%, Greedy 3x Random |
 | 1.1 | [Two-Stage](gift_allocation/exp/exp_two_stage_20260108.md) | ✅ | 揭示与Baseline不可直接对比 |

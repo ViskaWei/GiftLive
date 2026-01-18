@@ -1,6 +1,8 @@
 # Data files (too large)
 data/
 *.zip
+*.parquet
+gift_allocation/results/*.parquet
 
 # Python
 __pycache__/
