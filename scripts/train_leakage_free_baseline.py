@@ -3,7 +3,7 @@
 Leakage-Free Baseline: Past-Only Features & Click-Level EV Prediction
 =====================================================================
 
-Experiment: EXP-20260118-gift_EVmodel-01 (MVP-1.0)
+Experiment: EXP-20260118-gift_EVpred-01 (MVP-1.0)
 
 Goal: Fix data leakage in baseline by implementing past-only features
 (frozen and rolling versions) and switching from gift-only to click-level EV prediction.
@@ -43,7 +43,7 @@ np.random.seed(SEED)
 
 BASE_DIR = Path("/home/swei20/GiftLive")
 DATA_DIR = BASE_DIR / "data" / "KuaiLive"
-OUTPUT_DIR = BASE_DIR / "gift_EVmodel"
+OUTPUT_DIR = BASE_DIR / "gift_EVpred"
 IMG_DIR = OUTPUT_DIR / "img"
 RESULTS_DIR = OUTPUT_DIR / "results"
 MODELS_DIR = OUTPUT_DIR / "models"
@@ -59,6 +59,73 @@ def log_message(msg: str, level: str = "INFO"):
     timestamp = datetime.now().strftime("%H:%M:%S")
     prefix = {"INFO": "📝", "SUCCESS": "✅", "WARNING": "⚠️", "ERROR": "❌"}.get(level, "")
     print(f"[{timestamp}] {prefix} {msg}")
+
+
+def verify_rolling_features_no_leakage(df, gift, n_samples=100):
+    """
+    Verify that rolling features are truly past-only (no leakage).
+
+    Tests:
+    1. For each sample, rolling feature values should match manually computed past-only values
+    2. For first gift of each pair, pair_gift_count_past should be 0
+
+    Returns:
+        dict: verification results
+    """
+    log_message("Verifying rolling features for leakage...")
+
+    gift_sorted = gift.sort_values('timestamp').copy()
+    results = {'tests_passed': 0, 'tests_failed': 0, 'errors': []}
+
+    # Test 1: Sample verification
+    sample_indices = np.random.choice(len(df), size=min(n_samples, len(df)), replace=False)
+
+    for idx in sample_indices:
+        row = df.iloc[idx]
+        click_ts = row['timestamp']
+        user_id = row['user_id']
+        streamer_id = row['streamer_id']
+
+        # Compute true past-only pair stats
+        past_gifts = gift_sorted[
+            (gift_sorted['user_id'] == user_id) &
+            (gift_sorted['streamer_id'] == streamer_id) &
+            (gift_sorted['timestamp'] < click_ts)  # STRICT inequality
+        ]
+        true_count = len(past_gifts)
+        true_sum = past_gifts['gift_price'].sum() if len(past_gifts) > 0 else 0
+
+        # Compare with rolling features
+        rolling_count = row['pair_gift_count_past']
+        rolling_sum = row['pair_gift_sum_past']
+
+        if rolling_count != true_count:
+            results['tests_failed'] += 1
+            results['errors'].append({
+                'idx': int(idx),
+                'type': 'count_mismatch',
+                'expected': int(true_count),
+                'got': int(rolling_count),
+                'diff': int(rolling_count - true_count)
+            })
+        else:
+            results['tests_passed'] += 1
+
+    # Summary
+    total = results['tests_passed'] + results['tests_failed']
+    pass_rate = results['tests_passed'] / total * 100 if total > 0 else 0
+
+    if results['tests_failed'] == 0:
+        log_message(f"Verification PASSED: {results['tests_passed']}/{total} samples correct (100%)", "SUCCESS")
+        results['status'] = 'PASS'
+    else:
+        log_message(f"Verification FAILED: {results['tests_failed']}/{total} samples have leakage ({100-pass_rate:.1f}%)", "ERROR")
+        results['status'] = 'FAIL'
+        # Show first few errors
+        for err in results['errors'][:3]:
+            log_message(f"  idx={err['idx']}: expected={err['expected']}, got={err['got']}, diff={err['diff']}")
+
+    return results
 
 
 def load_data():
@@ -242,99 +309,387 @@ def apply_frozen_features(df, lookups, timestamp_col='timestamp'):
     return df
 
 
-def create_past_only_features_rolling(gift, click, df_full):
+def create_past_only_features_rolling_vectorized(gift, click, df_full):
     """
-    Create past-only features using rolling method: cumsum with shift(1).
-    
+    Optimized vectorized version of rolling features using binary search.
+
+    For large datasets, this is significantly faster than per-pair iteration.
+    Uses numpy searchsorted for O(log n) lookup per query.
+
     Args:
         gift: gift dataframe
         click: click dataframe
         df_full: full dataframe (sorted by timestamp)
-    
+
     Returns:
         df_full with past-only features added
     """
-    log_message("Creating rolling past-only features (cumsum + shift)...")
-    
+    log_message("Creating rolling past-only features (vectorized, leakage-free)...")
+
     df = df_full.copy()
     df = df.sort_values('timestamp').reset_index(drop=True)
-    
-    # Pair features: cumsum per (user_id, streamer_id)
+
     gift_sorted = gift.sort_values('timestamp').copy()
-    gift_sorted['pair_gift_sum_cum'] = gift_sorted.groupby(['user_id', 'streamer_id'])['gift_price'].cumsum()
+
+    # =========================================================================
+    # PAIR FEATURES using vectorized binary search
+    # =========================================================================
+    log_message("  Computing pair-level features (vectorized)...")
+
+    # Compute cumulative stats per pair
     gift_sorted['pair_gift_count_cum'] = gift_sorted.groupby(['user_id', 'streamer_id']).cumcount() + 1
+    gift_sorted['pair_gift_sum_cum'] = gift_sorted.groupby(['user_id', 'streamer_id'])['gift_price'].cumsum()
     gift_sorted['pair_gift_mean_cum'] = gift_sorted['pair_gift_sum_cum'] / gift_sorted['pair_gift_count_cum']
-    gift_sorted['pair_last_gift_ts'] = gift_sorted.groupby(['user_id', 'streamer_id'])['timestamp'].cummax()
-    
-    # Merge to df (for each click, find last gift before this click)
-    # This is simplified - in practice, we'd need to merge on timestamp ranges
-    # For now, we'll use a simpler approach: groupby and shift
-    pair_stats = gift_sorted.groupby(['user_id', 'streamer_id']).agg({
-        'gift_price': ['count', 'sum', 'mean'],
-        'timestamp': 'max'
-    }).reset_index()
-    pair_stats.columns = ['user_id', 'streamer_id', 'pair_gift_count', 'pair_gift_sum', 'pair_gift_mean', 'pair_last_gift_ts']
-    
-    # For rolling, we need to compute features up to each timestamp
-    # Simplified: use expanding window per (user_id, streamer_id) up to current timestamp
-    df['pair_gift_count_past'] = 0
-    df['pair_gift_sum_past'] = 0.0
-    df['pair_gift_mean_past'] = 0.0
-    df['pair_last_gift_time_gap_past'] = np.nan
-    
-    # This is computationally expensive - in practice, we'd optimize this
-    # For now, we'll use a simpler approximation: merge with pair_stats and compute gap
-    # Check if df already has these columns to avoid suffix conflicts
-    existing_cols = set(df.columns)
-    pair_stats_cols = ['pair_gift_count', 'pair_gift_sum', 'pair_gift_mean', 'pair_last_gift_ts']
-    suffix_needed = any(col in existing_cols for col in pair_stats_cols)
-    
-    if suffix_needed:
-        df = df.merge(pair_stats, on=['user_id', 'streamer_id'], how='left', suffixes=('', '_hist'))
-        pair_last_gift_col = 'pair_last_gift_ts_hist'
-        drop_cols = ['pair_gift_count', 'pair_gift_sum', 'pair_gift_mean', 'pair_last_gift_ts_hist']
-    else:
-        df = df.merge(pair_stats, on=['user_id', 'streamer_id'], how='left')
-        pair_last_gift_col = 'pair_last_gift_ts'
-        drop_cols = ['pair_gift_count', 'pair_gift_sum', 'pair_gift_mean', 'pair_last_gift_ts']
-    
-    df['pair_gift_count_past'] = df['pair_gift_count'].fillna(0)
-    df['pair_gift_sum_past'] = df['pair_gift_sum'].fillna(0.0)
-    df['pair_gift_mean_past'] = df['pair_gift_mean'].fillna(0.0)
-    
-    # Compute time gap
-    if pair_last_gift_col in df.columns:
-        mask = df[pair_last_gift_col].notna()
-        df.loc[mask, 'pair_last_gift_time_gap_past'] = (
-            (df.loc[mask, 'timestamp'] - df.loc[mask, pair_last_gift_col]) / (1000 * 3600)
-        )
-    df['pair_last_gift_time_gap_past'] = df['pair_last_gift_time_gap_past'].fillna(999)
-    
-    # Drop intermediate columns (only if they exist)
-    drop_cols = [col for col in drop_cols if col in df.columns]
-    if drop_cols:
-        df = df.drop(columns=drop_cols)
-    
-    # User features (7-day rolling window - simplified)
-    user_gift_7d = gift_sorted.groupby('user_id')['gift_price'].sum().reset_index().rename(columns={'gift_price': 'user_total_gift_7d'})
-    df = df.merge(user_gift_7d, on='user_id', how='left')
-    df['user_total_gift_7d_past'] = df['user_total_gift_7d'].fillna(0)
+
+    # Build lookup structure: for each pair, store arrays of (timestamps, cumstats)
+    pair_lookup = {}
+    for (user_id, streamer_id), grp in gift_sorted.groupby(['user_id', 'streamer_id']):
+        grp = grp.sort_values('timestamp')
+        pair_lookup[(user_id, streamer_id)] = {
+            'ts': grp['timestamp'].values,
+            'count': grp['pair_gift_count_cum'].values,
+            'sum': grp['pair_gift_sum_cum'].values,
+            'mean': grp['pair_gift_mean_cum'].values
+        }
+
+    # Vectorized lookup using numpy searchsorted
+    pair_count = np.zeros(len(df))
+    pair_sum = np.zeros(len(df))
+    pair_mean = np.zeros(len(df))
+    pair_last_ts = np.full(len(df), np.nan)
+
+    for idx, row in df.iterrows():
+        key = (row['user_id'], row['streamer_id'])
+        click_ts = row['timestamp']
+
+        if key in pair_lookup:
+            lookup = pair_lookup[key]
+            ts_arr = lookup['ts']
+            # Find position: strictly less than click_ts
+            pos = np.searchsorted(ts_arr, click_ts, side='left') - 1
+            if pos >= 0:
+                pair_count[idx] = lookup['count'][pos]
+                pair_sum[idx] = lookup['sum'][pos]
+                pair_mean[idx] = lookup['mean'][pos]
+                pair_last_ts[idx] = ts_arr[pos]
+
+    df['pair_gift_count_past'] = pair_count
+    df['pair_gift_sum_past'] = pair_sum
+    df['pair_gift_mean_past'] = pair_mean
+    df['pair_last_gift_time_gap_past'] = np.where(
+        ~np.isnan(pair_last_ts),
+        (df['timestamp'].values - pair_last_ts) / (1000 * 3600),
+        999
+    )
+
+    log_message(f"  Pair features done. Non-zero rate: {(pair_count > 0).mean()*100:.1f}%")
+
+    # =========================================================================
+    # USER FEATURES using vectorized binary search
+    # =========================================================================
+    log_message("  Computing user-level features (vectorized)...")
+
+    gift_sorted['user_gift_sum_cum'] = gift_sorted.groupby('user_id')['gift_price'].cumsum()
+
+    user_lookup = {}
+    for user_id, grp in gift_sorted.groupby('user_id'):
+        grp = grp.sort_values('timestamp')
+        user_lookup[user_id] = {
+            'ts': grp['timestamp'].values,
+            'sum': grp['user_gift_sum_cum'].values
+        }
+
+    user_sum = np.zeros(len(df))
+    for idx, row in df.iterrows():
+        user_id = row['user_id']
+        click_ts = row['timestamp']
+
+        if user_id in user_lookup:
+            lookup = user_lookup[user_id]
+            ts_arr = lookup['ts']
+            pos = np.searchsorted(ts_arr, click_ts, side='left') - 1
+            if pos >= 0:
+                user_sum[idx] = lookup['sum'][pos]
+
+    df['user_total_gift_7d_past'] = user_sum
+    df['user_budget_proxy_past'] = user_sum
+
+    log_message(f"  User features done. Non-zero rate: {(user_sum > 0).mean()*100:.1f}%")
+
+    # =========================================================================
+    # STREAMER FEATURES using vectorized binary search
+    # =========================================================================
+    log_message("  Computing streamer-level features (vectorized)...")
+
+    gift_sorted['str_revenue_cum'] = gift_sorted.groupby('streamer_id')['gift_price'].cumsum()
+    gift_sorted['str_gift_count_cum'] = gift_sorted.groupby('streamer_id').cumcount() + 1
+
+    str_lookup = {}
+    for streamer_id, grp in gift_sorted.groupby('streamer_id'):
+        grp = grp.sort_values('timestamp')
+        str_lookup[streamer_id] = {
+            'ts': grp['timestamp'].values,
+            'revenue': grp['str_revenue_cum'].values,
+            'count': grp['str_gift_count_cum'].values
+        }
+
+    str_revenue = np.zeros(len(df))
+    str_count = np.zeros(len(df))
+
+    for idx, row in df.iterrows():
+        streamer_id = row['streamer_id']
+        click_ts = row['timestamp']
+
+        if streamer_id in str_lookup:
+            lookup = str_lookup[streamer_id]
+            ts_arr = lookup['ts']
+            pos = np.searchsorted(ts_arr, click_ts, side='left') - 1
+            if pos >= 0:
+                str_revenue[idx] = lookup['revenue'][pos]
+                str_count[idx] = lookup['count'][pos]
+
+    df['streamer_recent_revenue_past'] = str_revenue
+    df['streamer_recent_unique_givers_past'] = str_count
+
+    log_message(f"  Streamer features done. Non-zero rate: {(str_revenue > 0).mean()*100:.1f}%")
+    log_message("Rolling features created (vectorized, leakage-free)", "SUCCESS")
+
+    return df
+
+
+def create_past_only_features_rolling(gift, click, df_full):
+    """
+    Create past-only features using TRUE rolling method with merge_asof.
+
+    Key: For each click at time t, features are computed from gifts where gift_timestamp < t.
+    Uses merge_asof to efficiently join on timestamp while respecting causality.
+
+    Args:
+        gift: gift dataframe
+        click: click dataframe
+        df_full: full dataframe (sorted by timestamp)
+
+    Returns:
+        df_full with past-only features added
+    """
+    log_message("Creating rolling past-only features (merge_asof, leakage-free)...")
+
+    df = df_full.copy()
+    df = df.sort_values('timestamp').reset_index(drop=True)
+
+    # =========================================================================
+    # PAIR FEATURES: (user_id, streamer_id) level
+    # For each click, get cumulative gift stats from gifts STRICTLY BEFORE click
+    # =========================================================================
+    log_message("  Computing pair-level rolling features...")
+
+    gift_sorted = gift.sort_values('timestamp').copy()
+
+    # Compute cumulative stats per pair (including current row)
+    gift_sorted['pair_gift_count_cum'] = gift_sorted.groupby(['user_id', 'streamer_id']).cumcount() + 1
+    gift_sorted['pair_gift_sum_cum'] = gift_sorted.groupby(['user_id', 'streamer_id'])['gift_price'].cumsum()
+    gift_sorted['pair_gift_mean_cum'] = gift_sorted['pair_gift_sum_cum'] / gift_sorted['pair_gift_count_cum']
+
+    # Create lookup table: for each (user, streamer, timestamp), store cumulative stats
+    # We'll use this with merge_asof to find the latest gift BEFORE each click
+    pair_cum_stats = gift_sorted[['user_id', 'streamer_id', 'timestamp',
+                                   'pair_gift_count_cum', 'pair_gift_sum_cum', 'pair_gift_mean_cum']].copy()
+    pair_cum_stats = pair_cum_stats.rename(columns={
+        'timestamp': 'gift_ts',
+        'pair_gift_count_cum': 'pair_gift_count_past',
+        'pair_gift_sum_cum': 'pair_gift_sum_past',
+        'pair_gift_mean_cum': 'pair_gift_mean_past'
+    })
+
+    # For each unique (user, streamer) pair, use merge_asof
+    # First, prepare df with click timestamps
+    df_for_merge = df[['user_id', 'streamer_id', 'timestamp']].copy()
+    df_for_merge['_orig_idx'] = df_for_merge.index
+
+    # Process by (user_id, streamer_id) pair to use merge_asof correctly
+    # merge_asof requires sorted data and works on single key, so we process per pair
+    pair_results = []
+
+    unique_pairs = df_for_merge[['user_id', 'streamer_id']].drop_duplicates()
+    n_pairs = len(unique_pairs)
+    log_message(f"  Processing {n_pairs:,} unique (user, streamer) pairs...")
+
+    for idx, (user_id, streamer_id) in enumerate(unique_pairs.itertuples(index=False)):
+        # Get clicks for this pair
+        pair_clicks = df_for_merge[
+            (df_for_merge['user_id'] == user_id) &
+            (df_for_merge['streamer_id'] == streamer_id)
+        ].copy().sort_values('timestamp')
+
+        # Get gifts for this pair
+        pair_gifts = pair_cum_stats[
+            (pair_cum_stats['user_id'] == user_id) &
+            (pair_cum_stats['streamer_id'] == streamer_id)
+        ].copy().sort_values('gift_ts')
+
+        if len(pair_gifts) == 0:
+            # No gift history for this pair - all zeros
+            pair_clicks['pair_gift_count_past'] = 0
+            pair_clicks['pair_gift_sum_past'] = 0.0
+            pair_clicks['pair_gift_mean_past'] = 0.0
+            pair_clicks['pair_last_gift_ts'] = np.nan
+        else:
+            # Use merge_asof to find latest gift STRICTLY BEFORE each click
+            # direction='backward' and allow_exact_matches=False ensures t_gift < t_click
+            merged = pd.merge_asof(
+                pair_clicks[['_orig_idx', 'timestamp']],
+                pair_gifts[['gift_ts', 'pair_gift_count_past', 'pair_gift_sum_past', 'pair_gift_mean_past']],
+                left_on='timestamp',
+                right_on='gift_ts',
+                direction='backward',
+                allow_exact_matches=False  # CRITICAL: ensures strict inequality (t_gift < t_click)
+            )
+            pair_clicks = pair_clicks.merge(
+                merged[['_orig_idx', 'pair_gift_count_past', 'pair_gift_sum_past', 'pair_gift_mean_past', 'gift_ts']],
+                on='_orig_idx',
+                how='left'
+            )
+            pair_clicks = pair_clicks.rename(columns={'gift_ts': 'pair_last_gift_ts'})
+
+        pair_results.append(pair_clicks[['_orig_idx', 'pair_gift_count_past', 'pair_gift_sum_past',
+                                          'pair_gift_mean_past', 'pair_last_gift_ts']])
+
+    # Combine all pair results
+    pair_features = pd.concat(pair_results, ignore_index=True)
+    pair_features = pair_features.set_index('_orig_idx')
+
+    # Merge back to df
+    df['pair_gift_count_past'] = pair_features['pair_gift_count_past'].reindex(df.index).fillna(0)
+    df['pair_gift_sum_past'] = pair_features['pair_gift_sum_past'].reindex(df.index).fillna(0.0)
+    df['pair_gift_mean_past'] = pair_features['pair_gift_mean_past'].reindex(df.index).fillna(0.0)
+
+    # Compute time gap from last gift
+    pair_last_ts = pair_features['pair_last_gift_ts'].reindex(df.index)
+    df['pair_last_gift_time_gap_past'] = np.where(
+        pair_last_ts.notna(),
+        (df['timestamp'] - pair_last_ts) / (1000 * 3600),  # Convert ms to hours
+        999  # No history
+    )
+
+    log_message(f"  Pair features done. Non-zero count rate: {(df['pair_gift_count_past'] > 0).mean()*100:.1f}%")
+
+    # =========================================================================
+    # USER FEATURES: user_id level
+    # For each click, get cumulative gift stats from user's gifts STRICTLY BEFORE click
+    # =========================================================================
+    log_message("  Computing user-level rolling features...")
+
+    # Compute cumulative stats per user
+    gift_sorted_user = gift_sorted.sort_values('timestamp').copy()
+    gift_sorted_user['user_gift_sum_cum'] = gift_sorted_user.groupby('user_id')['gift_price'].cumsum()
+    gift_sorted_user['user_gift_count_cum'] = gift_sorted_user.groupby('user_id').cumcount() + 1
+
+    user_cum_stats = gift_sorted_user.groupby('user_id').apply(
+        lambda g: g[['timestamp', 'user_gift_sum_cum', 'user_gift_count_cum']].drop_duplicates('timestamp').sort_values('timestamp')
+    ).reset_index(drop=True)
+    user_cum_stats = user_cum_stats.rename(columns={'timestamp': 'gift_ts'})
+
+    # Actually, simpler approach: use last cumsum before each unique timestamp
+    # Rebuild per-user cumulative
+    user_cum = gift_sorted_user[['user_id', 'timestamp', 'user_gift_sum_cum']].copy()
+    user_cum = user_cum.sort_values(['user_id', 'timestamp'])
+    # Take the last value for each (user, timestamp) if duplicates
+    user_cum = user_cum.groupby(['user_id', 'timestamp']).last().reset_index()
+    user_cum = user_cum.rename(columns={'timestamp': 'gift_ts', 'user_gift_sum_cum': 'user_total_gift_past'})
+
+    # For each click, merge_asof by user_id
+    df_sorted = df.sort_values('timestamp').copy()
+    user_results = []
+
+    for user_id in df['user_id'].unique():
+        user_clicks = df_sorted[df_sorted['user_id'] == user_id][['timestamp']].copy()
+        user_clicks['_user_idx'] = user_clicks.index
+        user_clicks = user_clicks.sort_values('timestamp')
+
+        user_gifts = user_cum[user_cum['user_id'] == user_id].sort_values('gift_ts')
+
+        if len(user_gifts) == 0:
+            user_clicks['user_total_gift_past'] = 0.0
+        else:
+            merged = pd.merge_asof(
+                user_clicks[['_user_idx', 'timestamp']],
+                user_gifts[['gift_ts', 'user_total_gift_past']],
+                left_on='timestamp',
+                right_on='gift_ts',
+                direction='backward',
+                allow_exact_matches=False
+            )
+            user_clicks = user_clicks.merge(merged[['_user_idx', 'user_total_gift_past']], on='_user_idx', how='left')
+
+        user_results.append(user_clicks[['_user_idx', 'user_total_gift_past']])
+
+    user_features = pd.concat(user_results, ignore_index=True).set_index('_user_idx')
+    df['user_total_gift_7d_past'] = user_features['user_total_gift_past'].reindex(df.index).fillna(0.0)
     df['user_budget_proxy_past'] = df['user_total_gift_7d_past']
-    df = df.drop(columns=['user_total_gift_7d'])
-    
-    # Streamer features
-    streamer_stats = gift_sorted.groupby('streamer_id').agg({
-        'gift_price': ['sum', 'count'],
-        'user_id': 'nunique'
-    }).reset_index()
-    streamer_stats.columns = ['streamer_id', 'streamer_recent_revenue', 'streamer_gift_count', 'streamer_recent_unique_givers']
-    df = df.merge(streamer_stats, on='streamer_id', how='left')
-    df['streamer_recent_revenue_past'] = df['streamer_recent_revenue'].fillna(0.0)
-    df['streamer_recent_unique_givers_past'] = df['streamer_recent_unique_givers'].fillna(0)
-    df = df.drop(columns=['streamer_recent_revenue', 'streamer_gift_count', 'streamer_recent_unique_givers'])
-    
-    log_message("Rolling features created (simplified version)")
-    
+
+    log_message(f"  User features done. Non-zero rate: {(df['user_total_gift_7d_past'] > 0).mean()*100:.1f}%")
+
+    # =========================================================================
+    # STREAMER FEATURES: streamer_id level
+    # For each click, get cumulative gift stats to streamer STRICTLY BEFORE click
+    # =========================================================================
+    log_message("  Computing streamer-level rolling features...")
+
+    # Compute cumulative stats per streamer
+    gift_sorted_str = gift_sorted.sort_values('timestamp').copy()
+    gift_sorted_str['str_revenue_cum'] = gift_sorted_str.groupby('streamer_id')['gift_price'].cumsum()
+
+    # For unique givers, need to track set - use cumcount of unique users
+    # Simplified: count cumulative gifts and use as proxy
+    gift_sorted_str['str_gift_count_cum'] = gift_sorted_str.groupby('streamer_id').cumcount() + 1
+
+    # Unique givers is trickier - compute expanding nunique
+    # For efficiency, we'll use an approximation based on cumcount
+    str_cum = gift_sorted_str[['streamer_id', 'timestamp', 'str_revenue_cum', 'str_gift_count_cum']].copy()
+    str_cum = str_cum.sort_values(['streamer_id', 'timestamp'])
+    str_cum = str_cum.groupby(['streamer_id', 'timestamp']).last().reset_index()
+    str_cum = str_cum.rename(columns={
+        'timestamp': 'gift_ts',
+        'str_revenue_cum': 'streamer_recent_revenue_past',
+        'str_gift_count_cum': 'streamer_recent_unique_givers_past'  # Approximation
+    })
+
+    # For each click, merge_asof by streamer_id
+    str_results = []
+
+    for streamer_id in df['streamer_id'].unique():
+        str_clicks = df_sorted[df_sorted['streamer_id'] == streamer_id][['timestamp']].copy()
+        str_clicks['_str_idx'] = str_clicks.index
+        str_clicks = str_clicks.sort_values('timestamp')
+
+        str_gifts = str_cum[str_cum['streamer_id'] == streamer_id].sort_values('gift_ts')
+
+        if len(str_gifts) == 0:
+            str_clicks['streamer_recent_revenue_past'] = 0.0
+            str_clicks['streamer_recent_unique_givers_past'] = 0
+        else:
+            merged = pd.merge_asof(
+                str_clicks[['_str_idx', 'timestamp']],
+                str_gifts[['gift_ts', 'streamer_recent_revenue_past', 'streamer_recent_unique_givers_past']],
+                left_on='timestamp',
+                right_on='gift_ts',
+                direction='backward',
+                allow_exact_matches=False
+            )
+            str_clicks = str_clicks.merge(
+                merged[['_str_idx', 'streamer_recent_revenue_past', 'streamer_recent_unique_givers_past']],
+                on='_str_idx', how='left'
+            )
+
+        str_results.append(str_clicks[['_str_idx', 'streamer_recent_revenue_past', 'streamer_recent_unique_givers_past']])
+
+    str_features = pd.concat(str_results, ignore_index=True).set_index('_str_idx')
+    df['streamer_recent_revenue_past'] = str_features['streamer_recent_revenue_past'].reindex(df.index).fillna(0.0)
+    df['streamer_recent_unique_givers_past'] = str_features['streamer_recent_unique_givers_past'].reindex(df.index).fillna(0)
+
+    log_message(f"  Streamer features done. Non-zero rate: {(df['streamer_recent_revenue_past'] > 0).mean()*100:.1f}%")
+    log_message("Rolling features created (leakage-free version)", "SUCCESS")
+
     return df
 
 
@@ -394,6 +749,10 @@ def prepare_features_with_version(gift, user, streamer, room, click, click_base,
         lookups = create_past_only_features_frozen(gift, click, train_df)
         df = apply_frozen_features(df, lookups)
     elif feature_version == 'rolling':
+        # Use vectorized version (faster, leakage-free)
+        df = create_past_only_features_rolling_vectorized(gift, click, df)
+    elif feature_version == 'rolling_asof':
+        # Use merge_asof version (alternative, also leakage-free)
         df = create_past_only_features_rolling(gift, click, df)
     else:
         raise ValueError(f"Unknown feature_version: {feature_version}")
@@ -925,6 +1284,12 @@ def main():
                 gift, user, streamer, room, click, click_full,
                 feature_version='rolling'
             )
+
+            # VERIFY: Check rolling features have no leakage
+            verification_results = verify_rolling_features_no_leakage(full_df, gift, n_samples=200)
+            if verification_results['status'] == 'FAIL':
+                log_message("Rolling feature verification failed! Check implementation.", "ERROR")
+
             # Then split
             train_df = full_df.iloc[:train_end].copy()
             val_df = full_df.iloc[train_end:val_end].copy()

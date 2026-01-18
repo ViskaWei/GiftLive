@@ -1,0 +1,16 @@
+{
+  "version": "V2_watch_time_truncation",
+  "direct_frozen": {
+    "mae_log": 0.028706484252713407,
+    "spearman": 0.09597732564165114,
+    "top_1pct_capture": 0.11216730038022814,
+    "top_5pct_capture": 0.09312620515466717,
+    "revenue_capture_1pct": 0.2082505257448237,
+    "revenue_capture_5pct": 0.26853333866858736
+  },
+  "data_stats": {
+    "total_samples": 4909515,
+    "gift_rate": 1.3773050902176691,
+    "total_gift": 5473569.0
+  }
+}

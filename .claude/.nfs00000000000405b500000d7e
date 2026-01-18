@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(xargs ls:*)",
+      "Bash(dmesg:*)",
+      "Bash(python scripts/train_leakage_free_baseline.py:*)",
+      "Bash(tee:*)",
+      "Bash(/home/swei20/anaconda3/bin/python:*)",
+      "Bash(source:*)",
+      "Bash(conda activate:*)",
+      "Bash(python -c:*)",
+      "Bash(kill:*)",
+      "Bash(git -C /home/swei20/GiftLive diff gift_EVmodel/exp/exp_leakage_free_baseline_20260118.md)",
+      "Bash(git -C /home/swei20/GiftLive status gift_EVmodel/exp/exp_leakage_free_baseline_20260118.md)",
+      "Skill(research-new-experiment)",
+      "Skill(research-coding-prompt)",
+      "Bash(python scripts/diagnose_rolling_leakage.py:*)",
+      "Bash(python scripts/train_feature_v2.py:*)",
+      "Bash(python scripts/train_binary_classification.py:*)",
+      "Bash(python scripts/test_watch_time_truncation.py:*)",
+      "Bash(wc:*)",
+      "Bash(python scripts/train_leakage_free_baseline_v2.py:*)",
+      "Bash(echo \"Checking for latest log file...\" ls -lt /home/swei20/GiftLive/logs/*.log)",
+      "Bash(/srv/local/tmp/swei20/miniconda3/envs/viska-torch-3/bin/python:*)",
+      "Bash(tail:*)",
+      "Bash(python scripts/evaluate_slices.py:*)"
+    ]
+  }
+}

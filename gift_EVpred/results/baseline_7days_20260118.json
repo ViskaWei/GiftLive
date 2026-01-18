@@ -1,0 +1,15 @@
+{
+  "spearman": 0.09051381110371313,
+  "top_1pct_capture": 0.09704957316159953,
+  "revenue_capture_1pct": 0.17356800229753278,
+  "auc": 0.5505629002655434,
+  "mae": 0.030966125282192836,
+  "rmse": 0.3191415493073287,
+  "training_time": 116.48861169815063,
+  "n_features": 49,
+  "n_train": 1872509,
+  "n_val": 1701600,
+  "n_test": 1335406,
+  "label_window_minutes": 15.0,
+  "split_type": "7-7-7_days"
+}

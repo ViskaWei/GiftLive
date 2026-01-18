@@ -1,0 +1,15 @@
+{
+  "original_gift_rate": 1.4990279080520175,
+  "fixed_gift_rate": 1.3773050902176691,
+  "gift_rate_diff": 0.12172281783434835,
+  "original_total_gift": 6555716.0,
+  "fixed_total_gift": 5473569.0,
+  "total_gift_diff_pct": 16.506923118695198,
+  "samples_with_diff_labels": 7041,
+  "diff_pct": 0.14341538828173456,
+  "gifts_outside_watch_window": 7041,
+  "outside_pct": 0.14341538828173456,
+  "revenue_outside_watch_window": 1082147.0,
+  "outside_revenue_pct": 16.506923118695198,
+  "verdict": "SIGNIFICANT_IMPACT"
+}

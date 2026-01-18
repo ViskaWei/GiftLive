@@ -386,8 +386,8 @@ MVP-5.5                                   (Phase 0-3)
 
 | 类型 | 路径 |
 |------|------|
-| Roadmap | `../gift_EVmodel/gift_EVmodel_roadmap.md` |
-| Hub | `../gift_EVmodel/gift_EVmodel_hub.md` |
+| Roadmap | `../gift_EVpred/gift_EVpred_roadmap.md` |
+| Hub | `../gift_EVpred/gift_EVpred_hub.md` |
 | 图表 | `img/` |
 | 结果 | `results/` |
 

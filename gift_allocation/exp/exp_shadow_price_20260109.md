@@ -12,8 +12,8 @@
 ## 🔗 上游追溯
 
 - **Coding Prompt**: `gift_allocation/prompts/coding_prompt_mvp52_shadow_price_20260109.md`
-- **Hub**: `../gift_EVmodel_hub.md`
-- **Roadmap**: `../gift_EVmodel_roadmap.md`
+- **Hub**: `../gift_EVpred_hub.md`
+- **Roadmap**: `../gift_EVpred_roadmap.md`
 
 ---
 

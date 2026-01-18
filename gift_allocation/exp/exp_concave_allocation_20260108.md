@@ -24,8 +24,8 @@
 
 | Type | Link |
 |------|------|
-| 🧠 Hub | `gift_EVmodel_hub.md` § DG3, Q2.1 |
-| 🗺️ Roadmap | `gift_EVmodel_roadmap.md` § MVP-2.1 |
+| 🧠 Hub | `gift_EVpred_hub.md` § DG3, Q2.1 |
+| 🗺️ Roadmap | `gift_EVpred_roadmap.md` § MVP-2.1 |
 
 ---
 # 1. 🎯 目标

@@ -103,7 +103,7 @@ Gate-0：验证 Past-only + Click-level 无泄漏 Baseline 的有效性
 |--------|-----|------|------|------|
 | 🔴 P0 | MVP-1.0 | Gate-0 | ❌ 完成-失败 | 无泄漏 Baseline（泄漏消除，性能不达标） |
 | 🔴 P0 | MVP-1.1 | - | ✅ 完成 | Rolling 泄漏诊断（确认泄漏，放弃 Rolling） |
-| 🔴 P0 | MVP-1.2 | - | 🔴 就绪 | 重构特征工程（序列/实时/内容特征） |
+| 🔴 P0 | MVP-1.2 | - | ✅ 完成 | 重构特征工程（watch_time 是最强信号，Top-1%=19.8%） |
 | 🔴 P0 | MVP-1.3 | - | ✅ 完成 | 任务降级验证（AUC=0.61，Prec@1%=19.24%） |
 | 🔴 P0 | MVP-1.6 | - | ✅ 完成 | 估计层审计（预测目标+IO口径+无泄漏验证，发现标签窗口问题） |
 | 🟡 P1 | MVP-1.4 | - | ✅ 完成 | 切片评估（冷启动是致命瓶颈） |
@@ -120,8 +120,8 @@ Gate-0：验证 Past-only + Click-level 无泄漏 Baseline 的有效性
 |-----|------|-------|------|------|--------|------|
 | ~~0.2~~ | ~~Baseline (gift-only)~~ | ~~0~~ | ~~-~~ | ❌ **泄漏无效** | `EXP-20260108-gift-allocation-02` | [Link](./exp/exp_baseline_20260108.md) |
 | **1.0** | **Leakage-Free Baseline** | **1** | **Gate-0** | **❌ 完成-失败** | `EXP-20260118-gift_EVpred-01` | [Link](./exp/exp_leakage_free_baseline_20260118.md) |
-| **1.1** | **Rolling Leakage Diagnosis** | **1** | **-** | **✅ 完成** | `EXP-20260118-gift_EVpred-03` | [Link](./exp/exp_rolling_leakage_diagnosis_20260118.md) |
-| **1.2** | **Feature Engineering V2** | **1** | **-** | **🟡 计划** | `EXP-20260118-gift_EVpred-04` | [Link](./exp/exp_feature_engineering_v2_20260118.md) |
+| **1.1** | **Rolling Leakage Diagnosis & Fix** | **1** | **-** | **✅ 完成** | `EXP-20260118-gift_EVpred-02/03` | [Fix](./exp/exp_rolling_leakage_fix_20260118.md), [Diagnosis](./exp/exp_rolling_leakage_diagnosis_20260118.md) |
+| **1.2** | **Feature Engineering V2** | **1** | **-** | **✅ 完成** | `EXP-20260118-gift_EVpred-04` | [Link](./exp/exp_feature_engineering_v2_20260118.md) |
 | **1.3** | **Binary Classification** | **1** | **-** | **✅ 完成** | `EXP-20260118-gift_EVpred-05` | [Link](./exp/exp_binary_classification_20260118.md) |
 | **1.4** | **Slice Evaluation** | **1** | **-** | **✅ 完成** | `EXP-20260118-gift_EVpred-06` | [Link](./exp/exp_slice_evaluation_20260118.md) |
 | **1.5** | **Calibration Evaluation** | **1** | **-** | **✅ 完成** | `EXP-20260118-gift_EVpred-07` | [Link](./exp/exp_calibration_evaluation_20260118.md) |
@@ -307,8 +307,9 @@ MVP-2.0
 | MVP | 结论 | 关键指标 | 同步Hub | 状态 |
 |-----|------|---------|---------|------|
 | ~~0.2~~ | ~~Baseline 性能超预期~~ → **发现数据泄漏，结果无效** | ~~Top-1%=56.2%~~（虚高） | ✅ §2.1 | ❌ 废弃 |
-| **1.0** | 待执行：验证 past-only 特征 + click-level EV | 目标 Top-1% > 40% | ⏳ | 🔴 就绪 |
-| **1.3** | ✅ 完成：二分类 AUC=0.61（<0.70），但 Prec@1%=19.24%（>5%），可用于召回 | AUC=0.6087, Prec@1%=19.24%, RevCap@1%=25.9% | ⏳ | ✅ 完成 |
+| **1.0** | ❌ 完成-失败：泄漏已消除但性能不达标（Top-1%=11.6%，目标>40%） | Top-1%=11.6%, RevCap@1%=21.6%, Spearman=0.14 | ✅ | ❌ 完成-失败 |
+| **1.2** | ✅ 完成：实时特征（watch_time）是最强信号，Top-1%=19.8%（+94% vs baseline），Spearman=0.405 | Top-1%=19.8% (baseline+rt), RevCap@1%=17.3%, Spearman=0.4051 | ✅ | ✅ 完成 |
+| **1.3** | ✅ 完成：二分类 AUC=0.61（<0.70），但 Prec@1%=19.24%（>5%），可用于召回；Two-Stage 改进版 RevCap@1%=25.9% | AUC=0.6087, Prec@1%=19.24%, Two-Stage RevCap@1%=25.9% | ✅ | ✅ 完成 |
 | **1.4** | ✅ 完成：冷启动是致命瓶颈（61.5% cold-pair），RevCap@1%=3.2%（仅为基线 16%） | cold-pair=3.2%, warm-pair=31.1% | ✅ | ✅ 完成 |
 | **1.5** | ✅ 完成：回归严重低估 1500x（pred=0.0008 vs actual=1.22），需 Two-Stage 或校准层 | 分类 ECE=0, 回归 ECE=1.22 | ✅ | ✅ 完成 |
 | **1.6** | ✅ 完成：估计层审计通过，发现标签窗口差异显著（16.51%），建议 watch_time 截断 | RevCap@1%=25.9%（Set-1），当前定义可服务在线分配 | ✅ | ✅ 完成 |
@@ -337,8 +338,9 @@ MVP-2.0
 |--------|-------|------|-----|------|
 | `EXP-20260108-gift-allocation-02` | Baseline (gift-only) | ❌ 废弃 | ~~MVP-0.2~~ | [exp_baseline_20260108.md](./exp/exp_baseline_20260108.md) |
 | `EXP-20260118-gift_EVpred-01` | Leakage-Free Baseline | ❌ 完成-失败 | MVP-1.0 | [exp_leakage_free_baseline_20260118.md](./exp/exp_leakage_free_baseline_20260118.md) |
-| `EXP-20260118-gift_EVpred-03` | Rolling Leakage Diagnosis | 🔴 就绪 | MVP-1.1 | [exp_rolling_leakage_diagnosis_20260118.md](./exp/exp_rolling_leakage_diagnosis_20260118.md) |
-| `EXP-20260118-gift_EVpred-04` | Feature Engineering V2 | 🟡 计划 | MVP-1.2 | [exp_feature_engineering_v2_20260118.md](./exp/exp_feature_engineering_v2_20260118.md) |
+| `EXP-20260118-gift_EVpred-02` | Rolling Leakage Fix | ✅ 完成 | MVP-1.1 | [exp_rolling_leakage_fix_20260118.md](./exp/exp_rolling_leakage_fix_20260118.md) |
+| `EXP-20260118-gift_EVpred-03` | Rolling Leakage Diagnosis | ✅ 完成 | MVP-1.1 | [exp_rolling_leakage_diagnosis_20260118.md](./exp/exp_rolling_leakage_diagnosis_20260118.md) |
+| `EXP-20260118-gift_EVpred-04` | Feature Engineering V2 | ✅ 完成 | MVP-1.2 | [exp_feature_engineering_v2_20260118.md](./exp/exp_feature_engineering_v2_20260118.md) |
 | `EXP-20260118-gift_EVpred-05` | Binary Classification | ✅ 完成 | MVP-1.3 | [exp_binary_classification_20260118.md](./exp/exp_binary_classification_20260118.md) |
 | `EXP-20260118-gift_EVpred-06` | Slice Evaluation | ✅ 完成 | MVP-1.4 | [exp_slice_evaluation_20260118.md](./exp/exp_slice_evaluation_20260118.md) |
 | `EXP-20260118-gift_EVpred-07` | Calibration Evaluation | ✅ 完成 | MVP-1.5 | [exp_calibration_evaluation_20260118.md](./exp/exp_calibration_evaluation_20260118.md) |
@@ -363,6 +365,8 @@ MVP-2.0
 |-----|------|---------------|-------------------|----------|------|
 | ~~0.2~~ | ~~gift-only, 有泄漏~~ | ~~56.2%~~ | ~~[未计算]~~ | ~~0.891~~ | ❌ 泄漏无效 |
 | **1.0** | click-level, past-only | **11.6%** | **21.6%** | **0.14** | ❌ 完成-失败 |
+| **1.2** | click-level, past-only + 实时特征 (baseline+rt) | **19.8%** | **17.3%** | **0.4051** | ✅ 完成 |
+| **1.3** | click-level, past-only (二分类 + Two-Stage 改进) | - | **25.9%** (Two-Stage) | - | ✅ 完成 |
 | **1.4** | click-level, past-only (切片评估) | - | **20.8%** (全量), **3.2%** (cold), **31.1%** (warm) | **0.096** | ✅ 完成 |
 | **1.5** | click-level, past-only (校准评估) | - | - | 分类 ECE=0, 回归 ECE=1.22 | ✅ 完成 |
 | **1.6** | click-level, past-only (Frozen), Logistic+Ridge | - | **25.9%** (Set-1 Linear) | **0.034** (Set-1 Linear) | ✅ 完成 |
@@ -406,3 +410,7 @@ MVP-2.0
 | | MVP-1.4: 冷启动 pair RevCap@1%=3.2%（仅为基线 16%） | §4.3 | 61.5% 的 test 是冷启动，致命瓶颈 |
 | | MVP-1.5: 回归 ECE=1.22，低估 1500x | §4.3 | 分类 ECE=0，回归需校准层或 Two-Stage |
 | | 更新数值汇总表和结论快照 | §4.3, §6.1 | 同步 Hub |
+| **2026-01-18** | **MVP-1.2/1.3 完成** | §1.3, §2.1, §4.3, §6.1 | **特征工程 + 二分类验证** |
+| | MVP-1.2: watch_time 是最强信号，Top-1%=19.8%（+94% vs baseline） | §4.3 | 实时特征有效，但未达 30% 目标 |
+| | MVP-1.3: 二分类 AUC=0.61，Prec@1%=19.24%，Two-Stage 改进版 RevCap@1%=25.9% | §4.3 | 二分类可用于召回，Two-Stage 有小幅提升 |
+| | 更新数值汇总表：添加 MVP-1.2/1.3 结果 | §6.1 | 同步 Hub |

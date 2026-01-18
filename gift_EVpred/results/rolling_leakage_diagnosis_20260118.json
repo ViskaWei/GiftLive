@@ -1,0 +1,141 @@
+{
+  "sorting_check": {
+    "gift_is_sorted": false,
+    "gift_out_of_order_count": 0,
+    "click_is_sorted": false,
+    "click_out_of_order_count": 0
+  },
+  "duplicate_check": {
+    "gift_max_per_ts": 4,
+    "gift_mean_per_ts": 1.0125583664366855,
+    "gift_ts_with_dups": 851,
+    "click_max_per_ts": 10,
+    "click_mean_per_ts": 1.8348676484988105,
+    "click_ts_with_dups": 1056513,
+    "gift_dup_pair_ts": 0
+  },
+  "first_gift_check": {
+    "first_gifts_total": 53865,
+    "first_gifts_with_future_data": 9050,
+    "leakage_rate_future": 16.8012624152975,
+    "leakage_confirmed": true
+  },
+  "time_travel_check": {
+    "samples_checked": 200,
+    "mismatches_found": 200,
+    "mismatch_rate": 100.0,
+    "avg_count_diff": 1.32,
+    "max_count_diff": 8,
+    "leakage_confirmed": true,
+    "sample_mismatches": [
+      {
+        "idx": 55512,
+        "user_id": 2656,
+        "streamer_id": 451526,
+        "true_count": 3,
+        "rolling_count": 4,
+        "count_diff": 1,
+        "true_sum": 11.0,
+        "rolling_sum": 12.0
+      },
+      {
+        "idx": 38530,
+        "user_id": 1710,
+        "streamer_id": 253239,
+        "true_count": 0,
+        "rolling_count": 1,
+        "count_diff": 1,
+        "true_sum": 0.0,
+        "rolling_sum": 1.0
+      },
+      {
+        "idx": 40537,
+        "user_id": 11328,
+        "streamer_id": 13294,
+        "true_count": 0,
+        "rolling_count": 1,
+        "count_diff": 1,
+        "true_sum": 0.0,
+        "rolling_sum": 14.0
+      },
+      {
+        "idx": 37963,
+        "user_id": 7826,
+        "streamer_id": 69590,
+        "true_count": 0,
+        "rolling_count": 2,
+        "count_diff": 2,
+        "true_sum": 0.0,
+        "rolling_sum": 11.0
+      },
+      {
+        "idx": 54315,
+        "user_id": 14515,
+        "streamer_id": 163011,
+        "true_count": 3,
+        "rolling_count": 7,
+        "count_diff": 4,
+        "true_sum": 3.0,
+        "rolling_sum": 7.0
+      },
+      {
+        "idx": 51268,
+        "user_id": 10957,
+        "streamer_id": 43913,
+        "true_count": 0,
+        "rolling_count": 1,
+        "count_diff": 1,
+        "true_sum": 0.0,
+        "rolling_sum": 28.0
+      },
+      {
+        "idx": 50482,
+        "user_id": 1416,
+        "streamer_id": 331664,
+        "true_count": 0,
+        "rolling_count": 1,
+        "count_diff": 1,
+        "true_sum": 0.0,
+        "rolling_sum": 4.0
+      },
+      {
+        "idx": 36586,
+        "user_id": 19086,
+        "streamer_id": 61649,
+        "true_count": 2,
+        "rolling_count": 6,
+        "count_diff": 4,
+        "true_sum": 3.0,
+        "rolling_sum": 13.0
+      },
+      {
+        "idx": 49860,
+        "user_id": 9547,
+        "streamer_id": 446609,
+        "true_count": 1,
+        "rolling_count": 3,
+        "count_diff": 2,
+        "true_sum": 6.0,
+        "rolling_sum": 39.0
+      },
+      {
+        "idx": 49129,
+        "user_id": 380,
+        "streamer_id": 374297,
+        "true_count": 0,
+        "rolling_count": 1,
+        "count_diff": 1,
+        "true_sum": 0.0,
+        "rolling_sum": 10.0
+      }
+    ]
+  },
+  "code_analysis": {
+    "issue": "Rolling implementation uses full-data groupby instead of expanding window",
+    "fix_needed": true,
+    "recommendation": "Use Frozen version as ground truth, fix Rolling or deprecate it"
+  },
+  "final_verdict": "LEAKAGE_CONFIRMED",
+  "recommendation": "Use Frozen version only. Rolling implementation is fundamentally flawed.",
+  "elapsed_time": 5.236911058425903
+}
