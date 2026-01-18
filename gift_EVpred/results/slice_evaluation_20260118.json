@@ -1,0 +1,152 @@
+{
+  "timestamp": "2026-01-18T14:59:11.907009",
+  "model": "direct_frozen_v2",
+  "n_test_samples": 736428,
+  "slice_results": [
+    {
+      "slice_name": "all",
+      "n_samples": 736428,
+      "gift_rate": 1.5166452117518616,
+      "revenue_share": 899676.0,
+      "spearman": 0.09597732564165114,
+      "rev_cap_1pct": 0.2082505257448237,
+      "rev_cap_5pct": 0.26853333866858736,
+      "top_1pct": 0.11216730038022814,
+      "top_5pct": 0.09312620515466717
+    },
+    {
+      "slice_name": "cold_pair",
+      "n_samples": 452689,
+      "gift_rate": 1.2856508552229013,
+      "revenue_share": 349751.0,
+      "spearman": 0.020031875887531064,
+      "rev_cap_1pct": 0.03249168694299659,
+      "rev_cap_5pct": 0.1523826951173835,
+      "top_1pct": 0.017675651789659744,
+      "top_5pct": 0.016833082972519217
+    },
+    {
+      "slice_name": "warm_pair",
+      "n_samples": 283739,
+      "gift_rate": 1.885183214151033,
+      "revenue_share": 549925.0,
+      "spearman": 0.13767810434391653,
+      "rev_cap_1pct": 0.3107023685047961,
+      "rev_cap_5pct": 0.3692867209164886,
+      "top_1pct": 0.14910116320056396,
+      "top_5pct": 0.16572677287466517
+    },
+    {
+      "slice_name": "cold_streamer",
+      "n_samples": 506097,
+      "gift_rate": 1.067581906235366,
+      "revenue_share": 396397.0,
+      "spearman": null,
+      "rev_cap_1pct": 0.007401670547456212,
+      "rev_cap_5pct": 0.07042687003181154,
+      "top_1pct": 0.02766798418972332,
+      "top_5pct": 0.8080935820423648
+    },
+    {
+      "slice_name": "warm_streamer",
+      "n_samples": 230331,
+      "gift_rate": 2.503353868997226,
+      "revenue_share": 503279.0,
+      "spearman": 0.1276254517051996,
+      "rev_cap_1pct": 0.3269637715859394,
+      "rev_cap_5pct": 0.39308415411729875,
+      "top_1pct": 0.14633087277464177,
+      "top_5pct": 0.16533518582841264
+    },
+    {
+      "slice_name": "cold_user",
+      "n_samples": 164931,
+      "gift_rate": 2.259126543827419,
+      "revenue_share": 226283.0,
+      "spearman": null,
+      "rev_cap_1pct": 0.005422413526424875,
+      "rev_cap_5pct": 0.0736511359669087,
+      "top_1pct": 0.01637355973317162,
+      "top_5pct": 0.5882852292020373
+    },
+    {
+      "slice_name": "warm_user",
+      "n_samples": 571497,
+      "gift_rate": 1.3023690413073035,
+      "revenue_share": 673393.0,
+      "spearman": 0.1205894478658985,
+      "rev_cap_1pct": 0.27312282723461634,
+      "rev_cap_5pct": 0.32093443204785316,
+      "top_1pct": 0.13265663283164159,
+      "top_5pct": 0.11622453979141877
+    },
+    {
+      "slice_name": "top1pct_user",
+      "n_samples": 10426,
+      "gift_rate": 3.289852292346058,
+      "revenue_share": 339214.0,
+      "spearman": 0.18859340318076767,
+      "rev_cap_1pct": 0.12347367738359856,
+      "rev_cap_5pct": 0.2810585647998019,
+      "top_1pct": 0.15384615384615385,
+      "top_5pct": 0.255278310940499
+    },
+    {
+      "slice_name": "top10pct_user",
+      "n_samples": 80126,
+      "gift_rate": 1.8870279310086613,
+      "revenue_share": 198372.0,
+      "spearman": 0.10772749205729439,
+      "rev_cap_1pct": 0.2821970842659246,
+      "rev_cap_5pct": 0.43397253644667594,
+      "top_1pct": 0.15730337078651685,
+      "top_5pct": 0.14628057913130305
+    },
+    {
+      "slice_name": "middle_user",
+      "n_samples": 245921,
+      "gift_rate": 1.570423022027399,
+      "revenue_share": 104772.0,
+      "spearman": 0.1084688174904332,
+      "rev_cap_1pct": 0.14797846752949262,
+      "rev_cap_5pct": 0.25308288474019774,
+      "top_1pct": 0.10614070760471736,
+      "top_5pct": 0.12166558230318802
+    },
+    {
+      "slice_name": "tail_user",
+      "n_samples": 399955,
+      "gift_rate": 1.3631533547524097,
+      "revenue_share": 257318.0,
+      "spearman": 0.0740013912040595,
+      "rev_cap_1pct": 0.014985348867937728,
+      "rev_cap_5pct": 0.13221772281768085,
+      "top_1pct": 0.05026256564141035,
+      "top_5pct": 0.05950892633895084
+    }
+  ],
+  "coldstart_analysis": [
+    {
+      "bin": "0",
+      "n_samples": 712619,
+      "gift_rate": 1.1889943995318677,
+      "rev_cap_1pct": 1.676522865175691,
+      "spearman": 0
+    },
+    {
+      "bin": "1-5",
+      "n_samples": 22170,
+      "gift_rate": 9.86468200270636,
+      "rev_cap_1pct": 27.42466756130292,
+      "spearman": 0.06425669780474448
+    },
+    {
+      "bin": "6-20",
+      "n_samples": 1639,
+      "gift_rate": 31.055521659548507,
+      "rev_cap_1pct": 22.58596808190304,
+      "spearman": 0.2339185053385553
+    }
+  ],
+  "baseline_revcap_1pct": 0.2082505257448237
+}

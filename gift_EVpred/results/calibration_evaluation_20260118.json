@@ -1,0 +1,91 @@
+{
+  "timestamp": "2026-01-18T15:09:32.046870",
+  "model": "direct_frozen_v2",
+  "n_test_samples": 736428,
+  "gift_rate": 0.015166452117518617,
+  "classification_calibration": {
+    "ece": 0.0,
+    "interpretation": "good",
+    "bins": [
+      {
+        "bin_idx": 9,
+        "bin_range": [
+          0.012477290884425066,
+          null
+        ],
+        "n_samples": 736428,
+        "pred_mean": 0.015166452117518617,
+        "actual_rate": 0.015166452117518617,
+        "error": 0.0
+      }
+    ]
+  },
+  "regression_calibration": {
+    "ece": 1.2208977105895964,
+    "actual_mean": 1.2216754387394286,
+    "pred_mean": 0.0007777281498324892,
+    "bins": [
+      {
+        "bin_idx": 0,
+        "bin_range": [
+          null,
+          6.160621413334774e-06
+        ],
+        "n_samples": 4604,
+        "pred_mean": 0.0,
+        "actual_mean": 11.684404865334491,
+        "error": 11.684404865334491
+      },
+      {
+        "bin_idx": 9,
+        "bin_range": [
+          6.160621413334774e-06,
+          null
+        ],
+        "n_samples": 731824,
+        "pred_mean": 0.0007826209388115725,
+        "actual_mean": 1.1558530466341634,
+        "error": 1.155070425695352
+      }
+    ]
+  },
+  "conditional_calibration": {
+    "ece": 80.5393170641779,
+    "n_samples": 11169,
+    "bins": [
+      {
+        "bin_idx": 0,
+        "bin_range": [
+          null,
+          6.160621413334774e-06
+        ],
+        "n_samples": 476,
+        "pred_mean": 0.0,
+        "actual_mean": 113.01470588235294,
+        "error": 113.01470588235294
+      },
+      {
+        "bin_idx": 8,
+        "bin_range": [
+          6.160621413334774e-06,
+          0.011596474012213486
+        ],
+        "n_samples": 9569,
+        "pred_mean": 0.0007144538599263523,
+        "actual_mean": 68.75807294388129,
+        "error": 68.75735849002136
+      },
+      {
+        "bin_idx": 9,
+        "bin_range": [
+          0.011596474012213486,
+          null
+        ],
+        "n_samples": 1124,
+        "pred_mean": 0.11168247438746469,
+        "actual_mean": 167.20195729537366,
+        "error": 167.0902748209862
+      }
+    ]
+  }
+}

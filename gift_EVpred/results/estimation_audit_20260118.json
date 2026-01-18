@@ -1,0 +1,308 @@
+{
+  "experiment_id": "EXP-20260118-gift_EVpred-08",
+  "mvp": "MVP-1.6",
+  "date": "2026-01-18T15:04:42.588078",
+  "audit_a": {
+    "r_rev": {
+      "definition": "$r^{rev}_t(a) = \\mathbb{E}[\\text{gift\\_amount}_{t:t+H} \\mid u, s, \\text{ctx}_t, a]$",
+      "scope": "This round: MUST implement",
+      "action_mapping": "action (a) = \"expose/guide user u to streamer s in live_id\"",
+      "data_fields": {
+        "user": "user_id",
+        "streamer": "streamer_id",
+        "live": "live_id",
+        "context": "timestamp, hour, day_of_week, is_weekend",
+        "outcome": "gift_price within H hours after click"
+      }
+    },
+    "r_usr": {
+      "definition": "$r^{usr}_t(a) = \\mathbb{E}[\\text{return}_{t+1d} \\mid u, \\text{history}, a]$ or $\\mathbb{E}[\\Delta \\text{watch\\_time}, \\Delta\\text{engagement} \\mid a]$",
+      "scope": "This round: Definition only, NOT training",
+      "action_mapping": "Same as r_rev",
+      "data_fields": {
+        "return": "user return within 1 day (not available in KuaiLive)",
+        "watch_time_delta": "watch_live_time (available)",
+        "engagement_delta": "comments, likes (not available in current dataset)"
+      }
+    },
+    "r_eco": {
+      "definition": "$r^{eco}_t(a) = -\\lambda \\cdot \\text{concentration}(\\text{exposure/revenue})$ or concave utility $U_s(x)$",
+      "scope": "This round: Definition only, NOT training",
+      "action_mapping": "Same as r_rev",
+      "data_fields": {
+        "concentration": "Gini coefficient of exposure/revenue across streamers",
+        "concave_utility": "Marginal utility $U_s'(x)$ (not implemented)"
+      }
+    }
+  },
+  "audit_b": {
+    "click_level": {
+      "definition": "One click = one opportunity (decision proxy)",
+      "implementation": "MUST implement",
+      "input": "(u_i, s_i, live_i, ctx_i, past_only_features_at_t_i)",
+      "label": "Y_i = sum of gift_amount within [t_i, t_i+H] for matching (u,s,live)",
+      "includes_zero": true,
+      "note": "Y=0 means no gift within H hours after click"
+    },
+    "session_level": {
+      "definition": "session = continuous viewing segment of same live_id (spliced by time gap threshold)",
+      "implementation": "Definition only, NOT implemented",
+      "input": "Session features: aggregated from clicks within session",
+      "label": "Session gift sum",
+      "includes_zero": true,
+      "note": "Requires session construction logic (time gap threshold)"
+    },
+    "impression_level": {
+      "definition": "One impression = one exposure opportunity (includes non-clicks)",
+      "implementation": "Definition only, NOT implemented",
+      "input": "Impression features: user, streamer, context at impression time",
+      "label": "Gift amount after impression (0 if no click or no gift)",
+      "includes_zero": true,
+      "data_requirement": "Requires impression/non-click logs (not available in KuaiLive)",
+      "note": "Strictest definition for allocation decisions"
+    }
+  },
+  "audit_c": {
+    "split_method": "Temporal split by timestamp (70/15/15 ratio)",
+    "is_week1_2_3": "Train spans 13 days, Val spans 3 days, Test spans 3 days",
+    "train": {
+      "n_samples": 3436660,
+      "min_timestamp": 1746374400022,
+      "max_timestamp": 1747559543408,
+      "min_datetime": "2025-05-04T16:00:00.022000",
+      "max_datetime": "2025-05-18T09:12:23.408000",
+      "n_unique_users": 23360,
+      "n_unique_streamers": 371441,
+      "n_unique_lives": 1319817,
+      "positive_rate": 0.014196632777173186,
+      "y_p50": 0.0,
+      "y_p90": 0.0,
+      "y_p99": 1.0,
+      "watch_time_p50": 4.029,
+      "watch_time_p90": 118.047,
+      "watch_time_p99": 1769.945270000007
+    },
+    "val": {
+      "n_samples": 736427,
+      "min_timestamp": 1747559543445,
+      "max_timestamp": 1747878301666,
+      "min_datetime": "2025-05-18T09:12:23.445000",
+      "max_datetime": "2025-05-22T01:45:01.666000",
+      "n_unique_users": 20406,
+      "n_unique_streamers": 159087,
+      "n_unique_lives": 295305,
+      "positive_rate": 0.01723592426676371,
+      "y_p50": 0.0,
+      "y_p90": 0.0,
+      "y_p99": 1.0,
+      "watch_time_p50": 4.625,
+      "watch_time_p90": 151.185,
+      "watch_time_p99": 2071.682679999989
+    },
+    "test": {
+      "n_samples": 736428,
+      "min_timestamp": 1747878301947,
+      "max_timestamp": 1748185198515,
+      "min_datetime": "2025-05-22T01:45:01.947000",
+      "max_datetime": "2025-05-25T14:59:58.515000",
+      "n_unique_users": 20809,
+      "n_unique_streamers": 158988,
+      "n_unique_lives": 299356,
+      "positive_rate": 0.016448315381816007,
+      "y_p50": 0.0,
+      "y_p90": 0.0,
+      "y_p99": 1.0,
+      "watch_time_p50": 4.336,
+      "watch_time_p90": 136.4206000000001,
+      "watch_time_p99": 1965.9106299999976
+    },
+    "verification": {
+      "train_val_gap": 1.0277777777777777e-05,
+      "val_test_gap": 7.805555555555556e-05,
+      "no_overlap": true
+    }
+  },
+  "audit_d": {
+    "label_window_hours": 1,
+    "overall_diff_ratio": 0.16506923118695196,
+    "total_fixed": 6555716.0,
+    "total_cap": 5473569.0,
+    "n_samples_with_diff": 7041,
+    "pct_samples_with_diff": 0.14341538828173456,
+    "bucket_stats": [
+      {
+        "bucket": "<5s",
+        "n_samples": 2646662,
+        "diff_ratio": 0.6556931199061442,
+        "total_fixed": 112513.0,
+        "total_cap": 38739.0
+      },
+      {
+        "bucket": "5-30s",
+        "n_samples": 1193391,
+        "diff_ratio": 0.6832406615340747,
+        "total_fixed": 168336.0,
+        "total_cap": 53322.0
+      },
+      {
+        "bucket": "30-300s",
+        "n_samples": 794859,
+        "diff_ratio": 0.3233216959445339,
+        "total_fixed": 1301552.0,
+        "total_cap": 880732.0
+      },
+      {
+        "bucket": ">300s",
+        "n_samples": 274603,
+        "diff_ratio": 0.09501489449190328,
+        "total_fixed": 4973315.0,
+        "total_cap": 4500776.0
+      }
+    ],
+    "verdict": "SIGNIFICANT_IMPACT"
+  },
+  "audit_e": {
+    "feature_version": "Frozen (train window statistics only)",
+    "lookup_stats": {
+      "n_pairs": 37595,
+      "n_users": 18402,
+      "n_streamers": 25890
+    },
+    "feature_list": [
+      "pair_gift_count_past",
+      "pair_gift_sum_past",
+      "pair_gift_mean_past",
+      "pair_last_gift_time_gap_past",
+      "user_total_gift_7d_past",
+      "user_budget_proxy_past",
+      "streamer_recent_revenue_past",
+      "streamer_recent_unique_givers_past"
+    ],
+    "verification": {
+      "method": "Frozen: Only use train window statistics",
+      "leakage_risk": "LOW (no future information)"
+    }
+  },
+  "audit_f": {
+    "Set-0": {
+      "logistic": {
+        "train": {
+          "PR_AUC": 0.014603221338836951,
+          "LogLoss": 0.07448576916720433,
+          "ECE": 0.002253629614214524,
+          "RevCap@1%": 0.012549322451739967
+        },
+        "val": {
+          "PR_AUC": 0.016488853161977807,
+          "LogLoss": 0.08743830806334212,
+          "ECE": 0.0036296696074447523,
+          "RevCap@1%": 0.0020091513141526117
+        },
+        "test": {
+          "PR_AUC": 0.016534444842575064,
+          "LogLoss": 0.08399952542347251,
+          "ECE": 0.002570469517387036,
+          "RevCap@1%": 0.0026296952257935185
+        },
+        "feature_importance": {
+          "hour": -0.028653233757499258,
+          "day_of_week": 0.0015766160394053595,
+          "is_weekend": 0.025406801557264058
+        }
+      },
+      "linear": {
+        "train": {
+          "MAE_log": 0.05365032455085941,
+          "RMSE_log": 0.3023748044686249,
+          "Spearman": 0.0027896944779188053,
+          "RevCap@1%": 0.0035027794215421733
+        },
+        "val": {
+          "MAE_log": 0.060208620654378264,
+          "RMSE_log": 0.3405322538877448,
+          "Spearman": -0.030057604733985884,
+          "RevCap@1%": 0.009241382631408572
+        },
+        "test": {
+          "MAE_log": 0.05758317515563534,
+          "RMSE_log": 0.3222046765987492,
+          "Spearman": -0.0012009282277459655,
+          "RevCap@1%": 0.010274817807793013
+        },
+        "feature_importance": {
+          "hour": 5.913318529437884e-05,
+          "day_of_week": 0.00042645494683552784,
+          "is_weekend": 0.0009038984240461122
+        }
+      }
+    },
+    "Set-1": {
+      "logistic": {
+        "train": {
+          "PR_AUC": 0.3125772607594148,
+          "LogLoss": 0.02951152194290752,
+          "ECE": 0.0008175923488545359,
+          "RevCap@1%": 0.3944553224837267
+        },
+        "val": {
+          "PR_AUC": 0.06086171652706541,
+          "LogLoss": 0.11222897098998526,
+          "ECE": 0.012495717697201996,
+          "RevCap@1%": 0.2205482762587516
+        },
+        "test": {
+          "PR_AUC": 0.05703812657111533,
+          "LogLoss": 0.10770523335049989,
+          "ECE": 0.013540507758773307,
+          "RevCap@1%": 0.1781110259026398
+        },
+        "feature_importance": {
+          "hour": -0.034031394390517083,
+          "day_of_week": 0.11624935685563359,
+          "is_weekend": 0.005078909235597567,
+          "pair_gift_count_past": -0.011318423742114371,
+          "pair_gift_sum_past": 0.043332053732038654,
+          "pair_gift_mean_past": 0.00111396630154515,
+          "pair_last_gift_time_gap_past": -1.432740117593118,
+          "user_total_gift_7d_past": 0.005577758828577324,
+          "user_budget_proxy_past": 0.005577758829178418,
+          "streamer_recent_revenue_past": -0.10128703469905195,
+          "streamer_recent_unique_givers_past": -0.05261041832648489
+        }
+      },
+      "linear": {
+        "train": {
+          "MAE_log": 0.039557572549462496,
+          "RMSE_log": 0.26586496126771436,
+          "Spearman": 0.19919167851328332,
+          "RevCap@1%": 0.9211494216107164
+        },
+        "val": {
+          "MAE_log": 0.05025520168443795,
+          "RMSE_log": 0.3372970702807812,
+          "Spearman": 0.04714131578341737,
+          "RevCap@1%": 0.3763640692760367
+        },
+        "test": {
+          "MAE_log": 0.04509227190348443,
+          "RMSE_log": 0.3221375088028601,
+          "Spearman": 0.03424875876156701,
+          "RevCap@1%": 0.2593781588729283
+        },
+        "feature_importance": {
+          "hour": 0.0004958464488398544,
+          "day_of_week": 0.0003635100984737051,
+          "is_weekend": 0.0007453986844314675,
+          "pair_gift_count_past": 0.025164309653662578,
+          "pair_gift_sum_past": 0.013422371695742088,
+          "pair_gift_mean_past": 0.05412731982395231,
+          "pair_last_gift_time_gap_past": 0.09776714029974362,
+          "user_total_gift_7d_past": 0.002455862416129841,
+          "user_budget_proxy_past": 0.002455862317866527,
+          "streamer_recent_revenue_past": 0.0013738431231040168,
+          "streamer_recent_unique_givers_past": 0.008393743444596804
+        }
+      }
+    }
+  }
+}
