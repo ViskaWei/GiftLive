@@ -1,0 +1,72 @@
+{
+  "analysis": "pair_gift_cnt_hist 特征深度分析",
+  "timestamp": "2026-01-19T02:24:35.670723",
+  "leakage_verification": {
+    "method": "Day-Frozen: merge_asof with allow_exact_matches=False",
+    "samples_tested": 10,
+    "samples_passed": 10,
+    "conclusion": "无泄漏"
+  },
+  "full_model_metrics": {
+    "n_features": 20,
+    "revcap_1pct": 0.514,
+    "whale_recall_1pct": 0.335,
+    "whale_precision_1pct": 0.051,
+    "avg_revenue_1pct": 64.1,
+    "gift_rate_1pct": 0.092,
+    "cv": 0.094,
+    "ci_95": [
+      0.473,
+      0.543
+    ]
+  },
+  "ablation_without_pair": {
+    "n_features": 17,
+    "removed_features": [
+      "pair_gift_cnt_hist",
+      "pair_gift_sum_hist",
+      "pair_gift_mean_hist"
+    ],
+    "revcap_1pct": 0.384,
+    "whale_recall_1pct": 0.184,
+    "whale_precision_1pct": 0.028,
+    "avg_revenue_1pct": 48.0,
+    "gift_rate_1pct": 0.048,
+    "cv": 0.266,
+    "delta_revcap": -0.129,
+    "delta_whale_recall": -0.151,
+    "delta_cv": 0.172
+  },
+  "subgroup_analysis": {
+    "has_history": {
+      "description": "复购 pair (pair_hist > 0)",
+      "sample_pct": 0.042,
+      "revenue_pct": 0.439,
+      "gift_rate": 0.1105,
+      "revcap_1pct": 0.351,
+      "whale_threshold": 199
+    },
+    "no_history": {
+      "description": "首次打赏 pair (pair_hist = 0)",
+      "sample_pct": 0.958,
+      "revenue_pct": 0.561,
+      "gift_rate": 0.0111,
+      "revcap_1pct": 0.296,
+      "whale_threshold": 62
+    }
+  },
+  "key_findings": [
+    "pair_gift_cnt_hist 无数据泄漏，使用 day < click_day 严格约束",
+    "pair_* 特征贡献 12.9pp RevCap 提升，是最重要的特征组",
+    "有历史 pair 的打赏率是无历史的 10 倍 (11.05% vs 1.11%)",
+    "56% 收入来自首次打赏，但模型对这部分预测能力弱 (RevCap 29.6%)",
+    "模型过度依赖复购信号，cold-start 场景是主要优化方向"
+  ],
+  "recommendations": [
+    "继续使用 pair_* 特征，已验证无泄漏",
+    "优化 user_gift_*_hist 特征以捕获用户级复购信号",
+    "优化 str_gift_*_hist 特征以捕获主播吸金能力",
+    "考虑用户-主播匹配特征（相似用户历史行为）",
+    "可能需要首次打赏专属模型处理 cold-start 场景"
+  ]
+}

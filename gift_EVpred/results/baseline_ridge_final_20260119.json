@@ -1,0 +1,51 @@
+{
+  "config": {
+    "model": "Ridge",
+    "alpha": 1.0,
+    "target": "raw_y",
+    "label_window_minutes": 1,
+    "strict_mode": true,
+    "n_features": 20,
+    "feature_cols": [
+      "pair_gift_cnt_hist",
+      "pair_gift_sum_hist",
+      "pair_gift_mean_hist",
+      "user_gift_cnt_hist",
+      "user_gift_sum_hist",
+      "user_gift_mean_hist",
+      "str_gift_cnt_hist",
+      "str_gift_sum_hist",
+      "str_gift_mean_hist",
+      "age",
+      "gender",
+      "device_brand",
+      "device_price",
+      "is_live_streamer",
+      "is_photo_author",
+      "live_type",
+      "live_content_category",
+      "hour",
+      "day_of_week",
+      "is_weekend"
+    ]
+  },
+  "results": {
+    "train_revcap_1pct": 0.2938555040409964,
+    "val_revcap_1pct": 0.44533043770955855,
+    "test_revcap_1pct": 0.5136317292180457,
+    "test_revcap_curve": {
+      "0.1%": 0.21178495616636367,
+      "0.5%": 0.4334921166554171,
+      "1%": 0.5136317292180457,
+      "2%": 0.5633371451187065,
+      "5%": 0.6362891444863785,
+      "10%": 0.6862413502704737
+    },
+    "test_whale_recall_1pct": 0.3458683819891143,
+    "test_whale_precision_1pct": 0.04959205391982973,
+    "test_cv": 0.09381225486442663,
+    "test_ci_lower": 0.47225272577455885,
+    "test_ci_upper": 0.5436130219349959
+  },
+  "timestamp": "2026-01-19T02:01:02.338126"
+}

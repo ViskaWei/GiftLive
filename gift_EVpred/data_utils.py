@@ -107,7 +107,7 @@ def prepare_click_level_labels(gift, click, label_window_minutes=1):
     构建 Click-level 标签（Last-Touch Attribution）
 
     Attribution Model: Last-touch (Last-click) within lookback window
-    Dedup Rule: 每个 gift 只能归因给 1 条 click（最近的一条）
+    Dedup Rule: 每个 gift 只能归因给 1 条 click（最近的一条），按 gift_id 去重
     Aggregation: 再把 gift 金额 sum 到 click-level label
 
     Args:
@@ -115,15 +115,15 @@ def prepare_click_level_labels(gift, click, label_window_minutes=1):
         click: click DataFrame
         label_window_minutes: 标签窗口（分钟），默认 1 分钟
             - 数据分析显示 98.2% 的 gift 在 click 同一毫秒内发生
-            - 1 分钟窗口已覆盖 98.45% 的 gift（97.11% 的金额）
+            - 1 分钟窗口已覆盖 92.6% 的 gift（90.0% 的金额）
             - 详见 exp/exp_label_window_analysis_20260119.md
 
     Returns:
-        DataFrame: click 数据 + gift_price_label 列（0 或正数）
+        tuple: (click DataFrame with gift_price_label, orphan_stats dict)
 
     注意:
         - 会自动删除 watch_live_time 列（泄漏特征）
-        - 每个 gift 只归因给最近的一条 click，避免 double counting
+        - 每个 gift 按 gift_id 去重，只归因给最近的一条 click
     """
     log(f"Preparing click-level labels (Last-Touch, window={label_window_minutes}min)...")
 
@@ -136,11 +136,30 @@ def prepare_click_level_labels(gift, click, label_window_minutes=1):
         log("Removed watch_live_time (leakage feature)", "WARNING")
 
     # ==========================================================================
+    # Step 0: 添加 gift_id（使用行号作为唯一标识）
+    # ==========================================================================
+    gift = gift.reset_index(drop=True)
+    gift['gift_id'] = gift.index
+    total_gift_count = len(gift)
+    total_gift_value = gift['gift_price'].sum()
+
+    # ==========================================================================
     # Step 1: 从 gift 角度 merge click（反向思路：先归因，再聚合）
     # ==========================================================================
     window_ms = label_window_minutes * 60 * 1000  # 转换为毫秒
 
-    merged = gift.merge(
+    # 先找出哪些 gift 有对应的 click
+    gift_with_click_keys = gift.merge(
+        click[['user_id', 'streamer_id', 'live_id']].drop_duplicates(),
+        on=['user_id', 'streamer_id', 'live_id'],
+        how='inner'
+    )['gift_id'].unique()
+
+    orphan_no_click = gift[~gift['gift_id'].isin(gift_with_click_keys)]
+    orphan_no_click_count = len(orphan_no_click)
+    orphan_no_click_value = orphan_no_click['gift_price'].sum()
+
+    merged = gift[gift['gift_id'].isin(gift_with_click_keys)].merge(
         click[['user_id', 'streamer_id', 'live_id', 'timestamp']].rename(
             columns={'timestamp': 'click_ts'}
         ),
@@ -151,28 +170,40 @@ def prepare_click_level_labels(gift, click, label_window_minutes=1):
     # ==========================================================================
     # Step 2: 筛选 gift 在 click 的窗口内（click_ts <= gift_ts <= click_ts + window）
     # ==========================================================================
-    merged = merged[
-        (merged['timestamp'] >= merged['click_ts']) &
-        (merged['timestamp'] <= merged['click_ts'] + window_ms)
-    ]
+    in_window = (merged['timestamp'] >= merged['click_ts']) & \
+                (merged['timestamp'] <= merged['click_ts'] + window_ms)
+    merged_in_window = merged[in_window]
+    merged_outside = merged[~in_window]
 
-    log(f"  Gift-Click pairs before dedup: {len(merged):,}")
+    # 统计窗口外的 gift（去重后）
+    outside_gift_ids = set(merged['gift_id']) - set(merged_in_window['gift_id'])
+    orphan_outside_window = gift[gift['gift_id'].isin(outside_gift_ids)]
+    orphan_outside_count = len(orphan_outside_window)
+    orphan_outside_value = orphan_outside_window['gift_price'].sum()
+
+    log(f"  Gift-Click pairs in window: {len(merged_in_window):,}")
 
     # ==========================================================================
-    # Step 3: Last-Touch - 每个 gift 只保留最近的 click（click_ts 最大）
+    # Step 3: Last-Touch - 每个 gift_id 只保留最近的 click（click_ts 最大）
     # ==========================================================================
-    if len(merged) > 0:
-        merged = merged.loc[
-            merged.groupby(['user_id', 'streamer_id', 'live_id', 'timestamp'])['click_ts'].idxmax()
+    if len(merged_in_window) > 0:
+        # 按 gift_id 去重（不是按 gift_ts），确保每个 gift 只归因一次
+        merged_dedup = merged_in_window.loc[
+            merged_in_window.groupby('gift_id')['click_ts'].idxmax()
         ]
+    else:
+        merged_dedup = merged_in_window
 
-    log(f"  Gift-Click pairs after dedup: {len(merged):,} (每个 gift 只归因 1 条 click)")
+    attributed_count = len(merged_dedup)
+    attributed_value = merged_dedup['gift_price'].sum() if len(merged_dedup) > 0 else 0
+
+    log(f"  Attributed gifts: {attributed_count:,} (dedup by gift_id)")
 
     # ==========================================================================
     # Step 4: 聚合到 click 级别
     # ==========================================================================
-    if len(merged) > 0:
-        gift_agg = merged.groupby(
+    if len(merged_dedup) > 0:
+        gift_agg = merged_dedup.groupby(
             ['user_id', 'streamer_id', 'live_id', 'click_ts']
         )['gift_price'].sum().reset_index().rename(columns={
             'click_ts': 'timestamp',
@@ -192,20 +223,35 @@ def prepare_click_level_labels(gift, click, label_window_minutes=1):
     click['gift_price_label'] = click['gift_price_label'].fillna(0)
 
     # ==========================================================================
-    # Step 6: 验证护栏 - 总金额守恒
+    # Step 6: 覆盖率统计 + Orphan Breakdown（不再用"守恒"误导）
     # ==========================================================================
-    total_label = click['gift_price_label'].sum()
-    total_gift = gift['gift_price'].sum()
-    ratio = total_label / total_gift if total_gift > 0 else 0
+    orphan_stats = {
+        'total_gift_count': total_gift_count,
+        'total_gift_value': total_gift_value,
+        'attributed_count': attributed_count,
+        'attributed_value': attributed_value,
+        'orphan_no_click_count': orphan_no_click_count,
+        'orphan_no_click_value': orphan_no_click_value,
+        'orphan_outside_window_count': orphan_outside_count,
+        'orphan_outside_window_value': orphan_outside_value,
+        'count_coverage': attributed_count / total_gift_count if total_gift_count > 0 else 0,
+        'value_coverage': attributed_value / total_gift_value if total_gift_value > 0 else 0,
+    }
 
-    if ratio > 1.01:
-        log(f"WARNING: 金额膨胀 {ratio:.2%}, label={total_label:,.0f}, gift={total_gift:,.0f}", "WARNING")
-    else:
-        log(f"  总金额守恒: label={total_label:,.0f}, gift={total_gift:,.0f}, ratio={ratio:.4f}", "SUCCESS")
+    log(f"  Attribution Coverage:")
+    log(f"    Count: {orphan_stats['count_coverage']:.1%} ({attributed_count:,}/{total_gift_count:,})")
+    log(f"    Value: {orphan_stats['value_coverage']:.1%} ({attributed_value:,.0f}/{total_gift_value:,.0f})")
+    log(f"  Orphan Breakdown:")
+    log(f"    No click:       {orphan_no_click_count:,} gifts ({orphan_no_click_value:,.0f} yuan, {orphan_no_click_value/total_gift_value*100:.1f}%)")
+    log(f"    Outside window: {orphan_outside_count:,} gifts ({orphan_outside_value:,.0f} yuan, {orphan_outside_value/total_gift_value*100:.1f}%)")
+
+    # 检查是否有金额膨胀（理论上不应该发生）
+    if attributed_value > total_gift_value * 1.001:
+        log(f"ERROR: 金额膨胀! attributed={attributed_value:,.0f} > total={total_gift_value:,.0f}", "ERROR")
 
     log(f"Click-level data: {len(click):,} records, gift_rate={click['gift_price_label'].gt(0).mean()*100:.2f}%")
 
-    return click
+    return click, orphan_stats
 
 
 # =============================================================================
@@ -416,40 +462,69 @@ def create_day_frozen_features(gift, click):
 
 
 # =============================================================================
-# 静态特征（无泄漏风险）
+# 静态特征
 # =============================================================================
-def add_static_features(df, user, streamer, room):
+
+# Snapshot 特征（KuaiLive 用 May 25 快照，存在时间泄漏风险）
+SNAPSHOT_FEATURES = [
+    # User snapshot features
+    'fans_num', 'follow_num', 'accu_watch_live_cnt', 'accu_watch_live_duration',
+    # Streamer snapshot features (will be prefixed with str_)
+    'fans_user_num', 'fans_group_fans_num', 'follow_user_num',
+    'accu_live_cnt', 'accu_live_duration', 'accu_play_cnt', 'accu_play_duration',
+]
+
+
+def add_static_features(df, user, streamer, room, strict_mode=True):
     """
-    添加静态特征（profile 特征，无泄漏风险）
+    添加静态特征
 
     Args:
         df: DataFrame
         user: user DataFrame
         streamer: streamer DataFrame
         room: room DataFrame
+        strict_mode: bool, 是否使用严格模式（默认 True）
+            - True (Strict): 只保留真正静态/在线可得字段，drop 所有快照累计特征
+            - False (Benchmark): 保留 KuaiLive 快照特征（fans/follow/accu_*）
+              注意：这些是 May 25, 2025 快照，存在时间泄漏风险
 
     Returns:
         DataFrame with static features added
     """
-    log("Adding static features...")
+    mode_str = "Strict" if strict_mode else "Benchmark"
+    log(f"Adding static features (mode={mode_str})...")
 
     df = df.copy()
 
     # -------------------------------------------------------------------------
     # User profile features
     # -------------------------------------------------------------------------
-    user_cols = ['user_id', 'age', 'gender', 'device_brand', 'device_price',
-                 'fans_num', 'follow_num', 'accu_watch_live_cnt', 'accu_watch_live_duration',
-                 'is_live_streamer', 'is_photo_author']
+    if strict_mode:
+        # Strict: 只保留真正静态字段
+        user_cols = ['user_id', 'age', 'gender', 'device_brand', 'device_price',
+                     'is_live_streamer', 'is_photo_author']
+    else:
+        # Benchmark: 包含快照特征（存在泄漏风险）
+        user_cols = ['user_id', 'age', 'gender', 'device_brand', 'device_price',
+                     'fans_num', 'follow_num', 'accu_watch_live_cnt', 'accu_watch_live_duration',
+                     'is_live_streamer', 'is_photo_author']
+
     user_cols = [c for c in user_cols if c in user.columns]
     df = df.merge(user[user_cols], on='user_id', how='left')
 
     # -------------------------------------------------------------------------
     # Streamer profile features
     # -------------------------------------------------------------------------
-    str_cols = ['streamer_id', 'fans_user_num', 'fans_group_fans_num',
-                'follow_user_num', 'accu_live_cnt', 'accu_live_duration',
-                'accu_play_cnt', 'accu_play_duration']
+    if strict_mode:
+        # Strict: 只保留 streamer_id（历史特征已在 day-frozen 里）
+        str_cols = ['streamer_id']
+    else:
+        # Benchmark: 包含快照特征
+        str_cols = ['streamer_id', 'fans_user_num', 'fans_group_fans_num',
+                    'follow_user_num', 'accu_live_cnt', 'accu_live_duration',
+                    'accu_play_cnt', 'accu_play_duration']
+
     str_cols = [c for c in str_cols if c in streamer.columns]
 
     # Rename to avoid conflict with user features
@@ -475,7 +550,7 @@ def add_static_features(df, user, streamer, room):
     df['day_of_week'] = ts_dt.dt.dayofweek
     df['is_weekend'] = (df['day_of_week'] >= 5).astype(int)
 
-    log(f"  Added static features, total columns: {df.shape[1]}", "SUCCESS")
+    log(f"  Added static features (mode={mode_str}), total columns: {df.shape[1]}", "SUCCESS")
 
     return df
 
@@ -484,7 +559,7 @@ def add_static_features(df, user, streamer, room):
 # 主函数
 # =============================================================================
 def prepare_dataset(train_days=7, val_days=7, test_days=7, gap_days=0,
-                    label_window_minutes=1, use_cache=True):
+                    label_window_minutes=1, use_cache=True, strict_mode=True):
     """
     准备无泄漏的数据集（主函数）
 
@@ -502,22 +577,26 @@ def prepare_dataset(train_days=7, val_days=7, test_days=7, gap_days=0,
         gap_days: Train-Val/Val-Test gap 天数 (default: 0)
         label_window_minutes: 标签窗口（分钟）(default: 1)
             - 数据分析显示 98.2% 的 gift 在 click 同一毫秒内发生
-            - 1 分钟窗口已覆盖 98.45% 的 gift（97.11% 的金额）
+            - 1 分钟窗口已覆盖 92.6% 的 gift（90.0% 的金额）
             - 如需更大窗口，可设为 5/10/60 分钟
             - 详见 exp/exp_label_window_analysis_20260119.md
         use_cache: 是否使用缓存 (default: True)
+        strict_mode: 是否使用严格无泄漏模式 (default: True)
+            - True (Strict): 只保留真正静态字段，drop 快照累计特征
+            - False (Benchmark): 保留 KuaiLive 快照特征（存在时间泄漏风险）
 
     Returns:
         tuple: (train_df, val_df, test_df)
 
     Example:
         >>> from gift_EVpred.data_utils import prepare_dataset, get_feature_columns
-        >>> train_df, val_df, test_df = prepare_dataset()  # 默认 1 分钟窗口
-        >>> train_df, val_df, test_df = prepare_dataset(label_window_minutes=60)  # 1 小时窗口
+        >>> train_df, val_df, test_df = prepare_dataset()  # 默认 1 分钟窗口 + Strict
+        >>> train_df, val_df, test_df = prepare_dataset(strict_mode=False)  # Benchmark 模式
         >>> feature_cols = get_feature_columns(train_df)
     """
+    mode_str = "Strict" if strict_mode else "Benchmark"
     log("=" * 60)
-    log("Preparing Leakage-Free Dataset (Day-Frozen Version)")
+    log(f"Preparing Leakage-Free Dataset (Day-Frozen, {mode_str} Mode)")
     log("=" * 60)
 
     # 缓存文件路径（包含窗口长度以区分不同配置）
@@ -533,9 +612,15 @@ def prepare_dataset(train_days=7, val_days=7, test_days=7, gap_days=0,
         log(f"Loading cached features from {cache_file}")
         click_with_features = pd.read_parquet(cache_file)
         log(f"  Loaded {len(click_with_features):,} records from cache", "SUCCESS")
+
+        # 缓存后清理：确保 forbidden features 不会从旧缓存带回来
+        for col in FORBIDDEN_FEATURES:
+            if col in click_with_features.columns:
+                click_with_features = click_with_features.drop(columns=[col])
+                log(f"  Removed forbidden feature from cache: {col}", "WARNING")
     else:
         # 2. Click-level labels (removes watch_live_time automatically)
-        click_with_labels = prepare_click_level_labels(gift, click, label_window_minutes)
+        click_with_labels, orphan_stats = prepare_click_level_labels(gift, click, label_window_minutes)
 
         # 3. Create day-frozen historical features (before split!)
         # 这样训练/验证/测试都用同一套逻辑
@@ -551,10 +636,10 @@ def prepare_dataset(train_days=7, val_days=7, test_days=7, gap_days=0,
         click_with_features, train_days, val_days, test_days, gap_days
     )
 
-    # 5. Add static features
-    train_df = add_static_features(train_df, user, streamer, room)
-    val_df = add_static_features(val_df, user, streamer, room)
-    test_df = add_static_features(test_df, user, streamer, room)
+    # 5. Add static features (with strict_mode control)
+    train_df = add_static_features(train_df, user, streamer, room, strict_mode=strict_mode)
+    val_df = add_static_features(val_df, user, streamer, room, strict_mode=strict_mode)
+    test_df = add_static_features(test_df, user, streamer, room, strict_mode=strict_mode)
 
     # 6. Create targets
     for df in [train_df, val_df, test_df]:

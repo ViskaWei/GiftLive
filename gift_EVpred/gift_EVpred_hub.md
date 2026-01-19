@@ -1,6 +1,31 @@
 # 🧠 gift_EVpred Hub
-> **ID:** EXP-20260118-gift_EVpred-hub | **Status:** 🌷 收敛（识别大哥阶段）
-> **Date:** 2026-01-18 | **Update:** 2026-01-19 (Over-Attribution 修复)
+
+> **Status:** ✅ 收敛（Baseline v1.0） | **Layer:** 估计层 | **Date:** 2026-01-19
+
+---
+
+## 🔗 上游链接
+
+| 层 | 链接 | 关系 |
+|----|------|------|
+| **Main** | [main_hub.md](../main/main_hub.md) | 全局综合 |
+| **Data** | [kuailive_hub.md](../KuaiLive/kuailive_hub.md) | 数据来源 |
+| **Allocation** | [gift_allocation_hub.md](../gift_allocation/gift_allocation_hub.md) | 下游消费者 |
+
+---
+
+## 🎯 本层职责
+
+> **估计层职责**：预测每次 click 的打赏期望值 (EV)，为分配层提供排序分数
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    gift_EVpred 职责                          │
+├─────────────────────────────────────────────────────────────┤
+│ ✅ 做：EV 预测模型、特征工程、模型对比、预测评估指标         │
+│ ❌ 不做：分配策略、Simulator、OPE、数据 EDA                  │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -15,48 +40,223 @@
 | K7 | **回归 > 分类（for RevCap）**：分类丢失金额信息，回归保留"大哥有多大" | AUC↑但RevCap↓ | RevCap 任务用回归，不用分类 |
 | K8 | **Linear > Tree（高稀疏回归）**：98.5% 为 0 时，树模型预测众数 | LGB -14.5% | 稀疏回归用 Linear |
 | K9 | **⚠️ Cold Start 效应**：Train RevCap << Test RevCap 不是泄漏，是历史数据积累不足 | Train 首日 0.1% | 评估看 Test，Train 仅用于训练 |
-| K10 | **✅ Over-Attribution 已修复**：同一 gift 被多条 click 重复计入导致 16.78% 膨胀 | Last-Touch 修复后 ratio=0.9237 | 每个 gift 只归因最近 1 条 click |
+| K10 | **✅ Last-Touch + gift_id 去重**：每个 gift 只归因最近 1 条 click，按 gift_id 去重避免重复 | 无膨胀 | 标准归因方案 |
+| K11 | **✅ 1 分钟窗口足够**：98.2% gift 在 click 同毫秒内发生，1min 窗口覆盖 92.6% | Coverage 分析 | 默认 1min，减少归因噪声 |
+| K12 | **✅ Strict 模式无泄漏**：drop 快照特征（fans/accu_*），仅用真正静态+历史特征 | KuaiLive 快照是 May 25 | 默认 Strict，Benchmark 可选 |
+| K13 | **⚠️ 首次打赏预测弱**：56% 收入来自无历史 pair，但 RevCap 只有 29.6% | 模型依赖复购信号 | 需优化 user/str 级特征 |
 
 **🦾 现阶段信念**
-- **Direct + raw Y (Ridge) 是当前最优方案** → RevCap@1%=51.0%（修复 Over-Attribution 后），Linear 模型已到瓶颈
+- **Direct + raw Y (Ridge) 是当前最优方案** → RevCap@1%=51.4%（Strict Mode），CV=9.4%
 - **LightGBM 回归失败，分类成功但无用** → 分类丢失金额信息，AUC 高不代表 RevCap 高
 - **目前专注"识别大哥"**，暂不考虑分配优化 → 先做好 EV 预测这个基础模块
 - **Frozen 特征已够用**，Rolling 是后续迭代方向 → 当前不增加复杂度
-- **✅ data_utils.py 已验证通过** → Expert Review 的 4 个问题经验证：3 个不存在，1 个已修复
+- **✅ data_utils.py Final 版本** → Last-Touch + gift_id 去重 + 1min 窗口 + Strict 模式
 
-**👣 下一步最有价值**（2026-01-19 立项）
+**👣 下一步最有价值**（2026-01-19）
 
-| 优先级 | 实验 ID | 任务 | 验收标准 | 状态 |
-|--------|---------|------|----------|------|
-| ~~🔴 P0~~ | `EXP-20260119-EVpred-01` | ~~指标体系落地~~ | ✅ RevCap@1%=52.6%, CV=10.8% | ✅ |
-| 🔴 P0 | `EXP-20260119-EVpred-02` | **历史观看先验特征** | RevCap > 54% | ⏳ |
-| 🟡 P1 | `EXP-20260119-EVpred-03` | **样本加权回归** | RevCap > 55% | ⏳ |
-| 🟡 P1 | - | Whale 专属特征 | RevCap > 54% | 待立项 |
-| 🟢 P2 | - | 尝试 MLP | RevCap > 55% | 待立项 |
-| 🟢 P3 | - | 分配 MVP | 贪心 vs 凹收益贪心 | 待立项 |
+| 优先级 | 任务 | 验收标准 | 状态 |
+|--------|------|----------|------|
+| 🔴 **P0** | **预测目标扩展** | 留存 AUC > 0.6 | ⏳ 新立项 |
+| 🔴 P0 | 历史观看先验特征 | RevCap > 54% | ⏳ |
+| 🟡 P1 | 样本加权回归 | RevCap > 55% | ⏳ |
+| 🟡 P1 | Whale 专属特征 | RevCap > 54% | 待立项 |
+| 🟢 P2 | 尝试 MLP | RevCap > 55% | 待立项 |
+| 🟢 P3 | 分配 MVP | 贪心 vs 凹收益贪心 | 待立项 |
 
 **详见**: [实验报告](./exp/)
 
-> **权威数字**：Best=51.0% RevCap@1%（Linear 上界，Last-Touch 修复后）；条件=Direct Ridge + raw Y, Day-Frozen
+---
 
-| 模型/方法 | RevCap@1% | 配置 | 备注 |
-|-----------|-----------|------|------|
-| **Direct + raw Y (Ridge)** | **51.0%** | Ridge alpha=1.0, raw Y, Last-Touch | ✅ Linear 上界 (修复后) |
-| LightGBM + raw Y | ~45% | 强正则化 | ❌ Tree 失败 |
-| Two-Stage + raw Y | ~43% | LR + Ridge, raw Y | B2 变体 |
-| Direct + log Y | ~35% | Ridge, log(1+Y) | log 压缩 whale |
-| Oracle | ~99% | 真实 top-1% | 理论上界 |
+## 📊 Final Baseline v1.0（2026-01-19）
 
-**Baseline 层级**（用于对照"是否有用"）：
-| 层级 | 方法 | RevCap@1% | 说明 |
-|------|------|-----------|------|
-| B0 | Random | ~1% | 随机排序 |
-| B1 | Popularity | 待测 | 按主播热度排序 |
-| **B2** | **Direct + raw Y** | **51.0%** | **当前 ML baseline (Last-Touch 修复后)** |
+> **权威数字**：RevCap@1%=**51.4%**（Strict Mode, 1min Window）；CV=**9.4%**（首次 <10%）
 
-**MVP 验收标准**：
-- 离线：Top 1% 捕获 >50% 收入（当前 51.0% ✅）
-- 在线：Revenue per DAU 正向，留存/生态指标不恶化
+### 核心结果
+
+| 指标 | 值 | 说明 |
+|------|-----|------|
+| **RevCap@1%** | **51.4%** | Top 1% 预测捕获 51.4% 收入 |
+| **CV (稳定性)** | **9.4%** | 首次 <10% 阈值 |
+| **95% CI** | [47.2%, 54.4%] | Bootstrap 置信区间 |
+| Whale Recall@1% | 34.6% | 召回 34.6% 的大额打赏 |
+| Whale Precision@1% | 5.0% | Top 1% 中 5% 是大额打赏 |
+
+### RevCap 曲线
+
+| Top K% | RevCap |
+|--------|--------|
+| 0.1% | 21.2% |
+| 0.5% | 43.3% |
+| **1%** | **51.4%** |
+| 2% | 56.3% |
+| 5% | 63.6% |
+| 10% | 68.6% |
+
+### 模型配置
+
+| 项 | 配置 |
+|-----|------|
+| 模型 | Ridge Regression (alpha=1.0) |
+| 目标 | raw Y (非 log) |
+| 特征数 | **20** (Strict Mode) |
+| 标签窗口 | **1 分钟** |
+| 归因方式 | Last-Touch + gift_id 去重 |
+| 数据划分 | 7-7-7 按天 |
+
+### 特征列表（20 个）
+
+| 类别 | 特征 |
+|------|------|
+| Pair 历史 (3) | `pair_gift_cnt_hist`, `pair_gift_sum_hist`, `pair_gift_mean_hist` |
+| User 历史 (3) | `user_gift_cnt_hist`, `user_gift_sum_hist`, `user_gift_mean_hist` |
+| Streamer 历史 (3) | `str_gift_cnt_hist`, `str_gift_sum_hist`, `str_gift_mean_hist` |
+| User Profile (5) | `age`, `gender`, `device_brand`, `device_price`, `is_live_streamer`, `is_photo_author` |
+| Room (2) | `live_type`, `live_content_category` |
+| Time (3) | `hour`, `day_of_week`, `is_weekend` |
+
+### 模型对比
+
+| 模型/方法 | RevCap@1% | CV | 配置 | 备注 |
+|-----------|-----------|-----|------|------|
+| **Ridge (Strict, 1min)** | **51.4%** | **9.4%** | 20 features | ✅ Final Baseline |
+| LightGBM + raw Y | ~45% | - | 强正则化 | ❌ Tree 失败 |
+| Two-Stage + raw Y | ~43% | - | LR + Ridge | B2 变体 |
+| Direct + log Y | ~35% | - | log(1+Y) | log 压缩 whale |
+| Oracle | ~99% | - | 真实 top-1% | 理论上界 |
+
+### MVP 验收标准
+
+| 标准 | 阈值 | 当前 | 状态 |
+|------|------|------|------|
+| RevCap@1% | >50% | 51.4% | ✅ |
+| CV | <10% | 9.4% | ✅ |
+
+---
+
+## 📚 Quick Reference (Agent 必读)
+
+> 本节是给 Agent 的快速参考，包含 Baseline、Data、Metric 的核心信息。
+
+### 🔵 Baseline 是什么？
+
+**模型**：Ridge Regression (alpha=1.0)
+**目标**：预测每次 click 的打赏金额（raw Y，非 log）
+**核心结果**：RevCap@1%=51.4%，CV=9.4%
+
+```python
+# 使用方法
+from gift_EVpred.data_utils import prepare_dataset, get_feature_columns
+from sklearn.linear_model import Ridge
+
+train_df, val_df, test_df = prepare_dataset()  # Strict + 1min 窗口
+feature_cols = get_feature_columns(train_df)   # 20 个特征
+
+model = Ridge(alpha=1.0)
+model.fit(train_df[feature_cols], train_df['target_raw'])  # target_raw = gift_price_label
+pred = model.predict(test_df[feature_cols])
+```
+
+**特征列表（20 个）**：
+| 类别 | 特征 | 含义 |
+|------|------|------|
+| Pair 历史 | `pair_gift_cnt_hist` | 该 user-streamer pair 过去打赏次数 |
+| | `pair_gift_sum_hist` | 该 pair 过去打赏总金额 |
+| | `pair_gift_mean_hist` | 该 pair 过去打赏均值 |
+| User 历史 | `user_gift_cnt_hist` | 该 user 过去总打赏次数 |
+| | `user_gift_sum_hist` | 该 user 过去总打赏金额 |
+| | `user_gift_mean_hist` | 该 user 过去打赏均值 |
+| Streamer 历史 | `str_gift_cnt_hist` | 该 streamer 收到的总打赏次数 |
+| | `str_gift_sum_hist` | 该 streamer 收到的总金额 |
+| | `str_gift_mean_hist` | 该 streamer 收到的打赏均值 |
+| User Profile | `age`, `gender`, `device_brand`, `device_price`, `is_live_streamer`, `is_photo_author` | 用户静态属性 |
+| Room | `live_type`, `live_content_category` | 直播间类型 |
+| Time | `hour`, `day_of_week`, `is_weekend` | 时间特征 |
+
+**禁止使用的特征**：
+- `watch_live_time`：post-treatment 泄漏（包含打赏后停留时间）
+- 任何 `_past` 后缀以外的聚合特征
+
+---
+
+### 🟢 Data 是什么？
+
+**数据源**：KuaiLive (`data/KuaiLive/`)
+**样本量**：Train 1.6M / Val 1.7M / Test 1.4M
+**时间范围**：2025-05-04 ~ 2025-05-24（21 天，7-7-7 划分）
+
+**数据处理核心设计**：
+1. **Day-Frozen**：历史特征只用 `day < click_day` 的数据（无泄漏）
+2. **Last-Touch 归因**：每个 gift 只归因给最近 1 条 click（按 gift_id 去重）
+3. **1 分钟窗口**：click 后 1 分钟内的 gift 归因给该 click（覆盖 92.6%）
+4. **Strict 模式**：drop 快照特征（fans/accu_*），避免 KuaiLive 快照泄漏
+
+```python
+# 标准用法
+from gift_EVpred.data_utils import prepare_dataset, get_feature_columns
+
+# 默认配置：Strict + 1min 窗口
+train_df, val_df, test_df = prepare_dataset()
+
+# 可选：Benchmark 模式（含快照特征，31 个特征）
+train_df, val_df, test_df = prepare_dataset(strict_mode=False)
+```
+
+**关键字段**：
+| 字段 | 含义 |
+|------|------|
+| `user_id`, `streamer_id`, `live_id` | 标识字段 |
+| `timestamp` | click 时间戳（毫秒） |
+| `gift_price_label` | 标签：click 后 1 分钟内打赏金额 |
+| `target_raw` | = gift_price_label（用于回归） |
+| `target` | = log(1 + gift_price_label)（不推荐） |
+| `is_gift` | = (gift_price_label > 0) |
+
+---
+
+### 🟡 Metric 是什么？
+
+**主指标**：Revenue Capture @K（RevCap@K）
+**定义**：Top K% 预测捕获的实际收入占比
+
+$$\text{RevCap@K} = \frac{\sum_{i \in \text{TopK}} y_i}{\sum_i y_i}$$
+
+**为什么用 RevCap 而不是 AUC/MAE？**
+- AUC 衡量"区分能力"，不关心金额大小
+- MAE 衡量"预测误差"，但头部误差和尾部同权
+- **RevCap 衡量"价值捕获"**，直接对齐业务目标
+
+**辅助指标**：
+| 指标 | 含义 | 阈值 |
+|------|------|------|
+| CV (稳定性) | 按天 RevCap 的变异系数 | < 10% |
+| Whale Recall@K | Top K% 预测召回多少大额打赏 | - |
+| 95% CI | Bootstrap 置信区间 | - |
+
+```python
+# 计算方法
+from gift_EVpred.metrics import compute_revcap, compute_revcap_curve
+
+revcap_1pct = compute_revcap(y_true, y_pred, k=0.01)
+curve = compute_revcap_curve(y_true, y_pred, ks=[0.001, 0.005, 0.01, 0.02, 0.05, 0.1])
+```
+
+---
+
+### 🔴 当前预测目标 vs 长期目标
+
+**当前（Phase 1）**：
+- 预测目标：`E[gift_amount | click]`
+- 评估指标：RevCap@1%
+- 已达成：51.4%
+
+**长期（Phase 2+）**：
+- 短期收益：$r^{rev}_t = E[\text{gift\_amount}_{t:t+H} | u, s, ctx, a]$
+- 用户留存：$r^{usr}_t = E[\text{return}_{t+1d} | u, history, a]$
+- 生态健康：$r^{eco}_t = -\lambda \cdot \text{concentration}(\text{exposure/revenue})$
+
+**关键区分**：
+- 当前：预测"这条样本是否/会送多少礼"
+- 长期：预测"给了这个行动（分配），会发生什么"
 
 ---
 
@@ -75,9 +275,11 @@
 | 项 | 规格 |
 |---|---|
 | 预测粒度 | Click-level（用户进入直播间时刻） |
-| 标签窗口 | W = 1 hour |
+| 标签窗口 | W = **1 minute**（默认，可调 5/10/60） |
+| 归因模型 | Last-Touch（每个 gift 只归因最近 1 条 click，按 gift_id 去重） |
 | 预测目标 | **raw Y**（非 log(1+Y)） |
 | 辅助标签 | is_gift = (gift_price_label > 0) |
+| 静态特征 | **Strict 模式**（默认，drop 快照特征；Benchmark 可选） |
 
 ### 1.2 业务目标
 
@@ -125,7 +327,11 @@
 └── Q2: 下一步优化方向？ ⏳
     ├── Q2.1: LightGBM 替代 Linear？ → ❌ 失败（-3.1%~-14.5%），Tree 不适合稀疏回归
     ├── Q2.2: Whale-specific 特征？ → ⏳ 待验证
-    └── Q2.3: Rolling 特征？ → ⏳ 后续迭代
+    ├── Q2.3: Rolling 特征？ → ⏳ 后续迭代
+    └── **Q2.4: 预测目标扩展？ → ⏳ 新立项**
+        ├── Q2.4.1: 用户留存可预测？ → ⏳ return_1d / return_7d
+        ├── Q2.4.2: 短期收益 vs 留存权衡？ → ⏳
+        └── Q2.4.3: 生态约束如何建模？ → ⏳ Gini / tail_coverage
 
 Legend: ✅ 已验证 | ❌ 已否定 | ⏳ 待验证
 ```
@@ -139,12 +345,25 @@ Legend: ✅ 已验证 | ❌ 已否定 | ⏳ 待验证
 | Dataset | KuaiLive (`data/KuaiLive/`) |
 | Train / Val / Test | 1,629,415 / 1,717,199 / 1,409,533 (7-7-7 by days) |
 | 时间范围 | 2025-05-04 ~ 2025-05-24 |
-| 特征 | 31 个 Day-Frozen 特征 |
-| Metric | **Revenue Capture @1%**（主指标） |
-| 标签窗口 | 1 hour |
+| **标签窗口** | **1 minute**（默认，98.2% gift 在同毫秒内发生） |
+| **归因模型** | Last-Touch + gift_id 去重（每个 gift 只归因 1 次） |
+| **静态特征模式** | **Strict**（默认，20 特征）/ Benchmark（31 特征，含快照） |
+| **主指标** | **RevCap@1%=51.4%** + **CV=9.4%** |
 | Seed | 42 |
 
-> 规则：任何口径变更必须写入 §8 变更日志。
+**Label Attribution Coverage**（1min window）：
+- Count: 92.6% (67,266 / 72,646)
+- Value: 90.0% (5.4M / 6.0M yuan)
+- Orphan: No click 5.8% + Outside window 4.2%
+
+**数据处理入口**：
+```python
+from gift_EVpred.data_utils import prepare_dataset, get_feature_columns
+train_df, val_df, test_df = prepare_dataset()  # 默认 Strict + 1min
+feature_cols = get_feature_columns(train_df)   # 20 个特征
+```
+
+> 规则：任何口径变更必须写入 §9 变更日志。
 
 ---
 
@@ -152,14 +371,15 @@ Legend: ✅ 已验证 | ❌ 已否定 | ⏳ 待验证
 
 ### 4.1 战略推荐
 
-- **推荐路线：Direct + raw Y + LightGBM**（理由：Linear 已到瓶颈，非线性可能进一步提升）
-- 需要 Roadmap 关闭的 Gate：Gate-2（LightGBM 验证）
+- **当前最优**：Ridge + raw Y（RevCap=51.4%，已达 Linear 瓶颈）
+- **下一步重点**：预测目标扩展（从 gift 到行动后果）
 
 | Route | 一句话定位 | 当前倾向 | 关键理由 |
 |---|---|---|---|
-| Route A: Direct + raw Y (Linear) | 简单有效的 baseline | 🟢 已验证 | RevCap=52.68% |
-| Route B: Two-Stage | 分阶段建模 | 🟡 次选 | RevCap=45.66%，不如 Direct |
-| **Route C: Direct + raw Y + LightGBM** | 非线性提升 | 🔴 待验证 | 预期进一步提升 |
+| **Route A: Ridge + raw Y** | Final Baseline | 🟢 已验证 | RevCap=51.4%, CV=9.4% |
+| Route B: LightGBM | 非线性 | ❌ 失败 | Tree 不适合稀疏数据 |
+| **Route C: 多目标预测** | 行动后果预测 | 🔴 **新立项** | 短期收益 + 留存 + 生态 |
+| Route D: 分配优化 | 上层应用 | ⏳ 远期 | 依赖 Route C 结果 |
 
 ### 4.2 分支答案表
 
@@ -207,6 +427,9 @@ Legend: ✅ 已验证 | ❌ 已否定 | ⏳ 待验证
 | **E10** | **AUC ≠ RevCap** | AUC 高但 RevCap 低 | AUC 衡量"区分能力"，RevCap 衡量"价值捕获" | 用 RevCap 评估 | exp_lightgbm |
 | **E11** | **⚠️ Cold Start 效应** | Train RevCap=29.4% << Test=52.6% | Day-Frozen 特征在 Train 早期几乎全为 0（数据集刚开始） | **不是泄漏**，评估看 Test | exp_baseline_ridge |
 | **E12** | **✅ Over-Attribution 修复** | 8.43% gift 被多条 click 计入，16.78% 金额膨胀 | 多次进入同一直播间时，同一 gift 被多条 click 的窗口覆盖 | **Last-Touch**：每个 gift 只归因最近 1 条 click | card_label_duplicate |
+| **E13** | **✅ 快照特征贡献低** | Strict (20特征) vs Benchmark (31特征) RevCap 完全相同 | 11 个快照特征只占 22.6% 系数权重，Top5 全是历史打赏特征 | 安心使用 Strict 模式，无需担心损失预测能力 | exp_strict_vs_benchmark |
+| **E14** | **✅ pair_hist 无泄漏但极重要** | 去掉 pair_* 后 RevCap -12.9pp，CV +17.2pp | Day-Frozen 严格 `day < click_day`，10/10 验证通过 | 合理信号，不是泄漏 | card_pair_hist_analysis |
+| **E15** | **⚠️ 首次打赏预测能力弱** | 56% 收入来自首次打赏，但 RevCap 只有 29.6% | 模型过度依赖复购信号，cold-start 场景能力不足 | 需优化 user/streamer 级特征 | card_pair_hist_analysis |
 
 **Linear 模型瓶颈确认**：Ridge alpha sweep 显示无调参空间，RevCap@1%=51.0%（修复后）是 Linear + Day-Frozen 的上界。LightGBM 无法突破此瓶颈（Tree 不适合稀疏回归）。
 
@@ -302,25 +525,50 @@ Expert Review 识别的 4 个潜在问题，经代码分析和验证：
 
 ## 8) 指针
 
+### 核心文件
+
 | 类型 | 路径 | 说明 |
 |---|---|---|
-| 🗺️ Roadmap | `gift_EVpred_roadmap.md` | Decision Gates + MVP 执行 |
-| 📄 Data Utils | `data_utils.py` | 统一数据处理入口 |
-| 📗 Baseline | `exp/exp_baseline_day_frozen_20260118.md` | Day-Frozen 基线 |
-| 📗 Three-Stage | `exp/exp_three_stage_20260118.md` | Whale-only 实验 |
-| 📗 Raw vs Log | `exp/exp_raw_vs_log_20260118.md` | 当前最优方案 |
-| 📗 LightGBM | `exp/exp_lightgbm_raw_y_20260118.md` | ❌ 失败分析 + 分类 vs 回归洞见 |
-| 📗 指标落地 | `exp/exp_metrics_landing_20260119.md` | ✅ RevCap@1%=52.6%, CV=10.8% |
-| 📗 **Baseline Ridge** | `exp/exp_baseline_ridge_20260119.md` | ✅ 标准基线 + Cold Start 分析 |
-| 📊 Metrics Module | `metrics.py` | ✅ 统一评估模块 |
-| 🧠 Card Baseline | `card/card_baseline.md` | ✅ 基线知识卡片 |
-| 🧠 Card Metric | `card/card_metric.md` | ✅ 指标知识卡片 |
-| 🧠 Card Data | `card/card_data.md` | ✅ 数据处理知识卡片 |
-| 🧠 **Card Label-Dup** | `card/card_label_duplicate.md` | ✅ Over-Attribution 修复 |
-| 📗 历史观看先验 | `exp/exp_watch_history_prior_20260119.md` | ⏳ EXP-20260119-EVpred-03 |
-| 📗 样本加权回归 | `exp/exp_weighted_regression_20260119.md` | ⏳ EXP-20260119-EVpred-04 |
-| 📊 Results | `results/` | 数值结果 JSON |
-| 🗃️ Archive | `exp/archive_leaky/` | 有泄漏的旧实验 |
+| 🗺️ **Roadmap** | `gift_EVpred_roadmap.md` | Decision Gates + MVP 执行 |
+| 📄 **Data Utils** | `data_utils.py` | **统一数据处理入口（Final v1.0）** |
+| 📊 **Metrics** | `metrics.py` | 统一评估模块 |
+| 📊 **Final Result** | `results/baseline_ridge_final_20260119.json` | **权威数字来源** |
+
+### 实验报告（按时间倒序）
+
+| 日期 | 报告 | 结论 |
+|------|------|------|
+| 01-19 | `exp/exp_strict_vs_benchmark_20260119.md` | ✅ 快照特征贡献低，Strict 足够 |
+| 01-19 | `exp/exp_label_window_analysis_20260119.md` | ✅ 1min 窗口覆盖 92.6% |
+| 01-19 | `exp/exp_baseline_ridge_20260119.md` | ✅ **Final Baseline: 51.4%** |
+| 01-19 | `exp/exp_metrics_landing_20260119.md` | ✅ 指标体系落地 |
+| 01-18 | `exp/exp_lightgbm_raw_y_20260118.md` | ❌ LightGBM 失败 |
+| 01-18 | `exp/exp_raw_vs_log_20260118.md` | ✅ raw Y >> log Y |
+| 01-18 | `exp/exp_three_stage_20260118.md` | ❌ Three-Stage 失败 |
+| 01-18 | `exp/exp_baseline_day_frozen_20260118.md` | ✅ Day-Frozen 框架 |
+
+### 知识卡片
+
+| 卡片 | 核心内容 |
+|------|---------|
+| `card/card_baseline.md` | Final Baseline 配置 |
+| `card/card_metric.md` | RevCap 指标体系 |
+| `card/card_data.md` | 数据处理规范 |
+| `card/card_label_duplicate.md` | Over-Attribution 修复 |
+| `card/card_pair_hist_analysis.md` | pair_hist 无泄漏验证 |
+
+### 待执行
+
+| 报告 | 状态 |
+|------|------|
+| `exp/exp_watch_history_prior_20260119.md` | ⏳ |
+| `exp/exp_weighted_regression_20260119.md` | ⏳ |
+
+### 归档
+
+| 路径 | 说明 |
+|------|------|
+| `exp/archive_leaky/` | 有泄漏的旧实验（勿参考） |
 
 ---
 
@@ -343,7 +591,14 @@ Expert Review 识别的 4 个潜在问题，经代码分析和验证：
 | 2026-01-19 | **MVP-3.2 Baseline 确立** | 保存模型/特征/配置，metrics.py + card_baseline.md |
 | 2026-01-19 | **🔑 Cold Start 效应发现** | Train RevCap=29.4% << Test=52.6% 不是泄漏，是历史特征积累不足；新增 K9, E11 |
 | 2026-01-19 | **🔴 Over-Attribution Bug 修复** | 8.43% gift 被多条 click 计入 → Last-Touch 修复；Label/Gift ratio 从 116.78% → 92.37%；新增 K10, E12 |
-| 2026-01-19 | **Baseline 重跑（修复后）** | RevCap@1%=51.0%（修复后，标签更准确）；card_data.md + card_label_duplicate.md 已更新 |
+| 2026-01-19 | **🔑 归因窗口分析** | 98.2% gift 在 click 同毫秒内发生；1min 窗口覆盖 92.6%；1min vs 60min 对 RevCap 无影响；新增 K11 |
+| 2026-01-19 | **🔑 Strict 模式上线** | Drop 快照特征（fans/accu_*），避免 KuaiLive May 25 快照泄漏；20 特征 vs 31 特征；新增 K12 |
+| 2026-01-19 | **🔑 data_utils.py Final 版本** | gift_id 去重 + 1min 默认窗口 + Strict 默认模式 + orphan breakdown 日志 |
+| 2026-01-19 | **Final Baseline (Strict)** | RevCap@1%=51.4%, CV=9.4%（首次 <10%），95% CI [47.2%, 54.4%] |
+| 2026-01-19 | **🔑 Strict vs Benchmark 对比** | 11 个快照特征只占 22.6% 系数权重；RevCap 完全相同；新增 E13 |
+| 2026-01-19 | **🔑 pair_hist 深度分析** | 验证无泄漏（10/10 通过）；去掉后 RevCap -12.9pp；发现首次打赏问题（56% 收入但 RevCap 29.6%）；新增 E14, E15 |
+| 2026-01-19 | **📦 Final Baseline v1.0 发布** | RevCap@1%=51.4%, CV=9.4%; 20 特征 (Strict); 1min 窗口; Last-Touch; 文档整理完成 |
+| 2026-01-19 | **🔴 预测目标扩展立项** | Q2.4 新增；从"预测 gift"扩展到"预测行动后果"（短期收益 + 留存 + 生态） |
 
 ---
 

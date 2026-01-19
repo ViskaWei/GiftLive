@@ -20,6 +20,11 @@ from gift_EVpred.data_utils import (
     verify_no_leakage,
     run_full_verification
 )
+from gift_EVpred.metrics import (
+    evaluate_model,
+    quick_eval,
+    revenue_capture_at_k,
+)
 
 # 标准数据准备（7-7-7 按天划分）
 train_df, val_df, test_df, lookups = prepare_dataset(
@@ -33,6 +38,28 @@ feature_cols = get_feature_columns(train_df)
 # - 自行读取 click.csv 并构建特征
 # - 使用 watch_live_time
 # - 使用 groupby().agg() 计算 pair/user/streamer 统计
+# - 自行实现评估指标（必须用 metrics.py）
+```
+
+### 评估指标规则
+
+> **所有评估必须使用 `gift_EVpred/metrics.py`，确保指标一致性！**
+
+```python
+# ✅ 正确做法：使用统一指标模块
+from gift_EVpred.metrics import evaluate_model, quick_eval
+
+# 完整评估（推荐）
+result = evaluate_model(y_true, y_pred, test_df)
+print(result.summary())
+result.to_json('gift_EVpred/results/exp_xxx.json')
+
+# 快速评估（训练中）
+metrics = quick_eval(y_true, y_pred, whale_threshold=100)
+
+# ❌ 禁止做法：
+# - 自行计算 RevCap、Whale Recall 等指标
+# - 使用 sklearn metrics 作为主指标（如 MAE、RMSE）
 ```
 
 ### 禁止使用的特征
@@ -170,6 +197,12 @@ training:
 - [ ] 所有 gift 相关特征带 `_past` 后缀
 - [ ] 运行 `verify_no_leakage()` 验证通过
 
+### 指标评估检查（必须通过）
+- [ ] 使用 `evaluate_model()` 进行完整评估
+- [ ] 主指标为 `RevCap@1%`（不是 MAE/RMSE）
+- [ ] 结果保存到 `gift_EVpred/results/` 目录
+- [ ] 调用 `result.summary()` 输出完整报告
+
 ### 代码检查
 - [ ] seed=42 固定随机性
 - [ ] 图表文字全英文
@@ -190,10 +223,13 @@ training:
 📌 Agent 执行规则：
 
 1. ⚠️ 必须使用 gift_EVpred/data_utils.py 加载数据
-2. ❌ 禁止自行实现数据处理逻辑
-3. ❌ 禁止使用 watch_live_time
-4. ✅ 先验证数据无泄漏再训练模型
-5. ✅ 按模板输出 exp.md 报告
+2. ⚠️ 必须使用 gift_EVpred/metrics.py 评估模型
+3. ❌ 禁止自行实现数据处理逻辑
+4. ❌ 禁止自行实现评估指标
+5. ❌ 禁止使用 watch_live_time
+6. ✅ 先验证数据无泄漏再训练模型
+7. ✅ 使用 evaluate_model() 输出完整评估
+8. ✅ 按模板输出 exp.md 报告
 -->
 ```
 
@@ -256,12 +292,24 @@ model = lgb.train(
     callbacks=[lgb.early_stopping(50)]
 )
 
-# 6. 评估
+# 6. 评估（必须使用 metrics 模块）
+from gift_EVpred.metrics import evaluate_model
+
 X_test = test_df[feature_cols]
 y_pred = model.predict(X_test)
+y_test = test_df['gift_amount']  # 原始金额（非 log）
+
+# 完整评估
+result = evaluate_model(y_test, y_pred, test_df)
+print(result.summary())
+
+# 保存结果
+result.to_json('gift_EVpred/results/exp_xxx.json')
 ```
 
 ### 可用函数列表
+
+#### data_utils.py（数据处理）
 
 | 函数 | 用途 |
 |------|------|
@@ -273,6 +321,19 @@ y_pred = model.predict(X_test)
 | `split_by_days(df, ...)` | 按天划分数据 |
 | `create_frozen_lookups(gift, ts)` | 创建冻结特征查找表 |
 | `apply_frozen_features(df, lookups)` | 应用冻结特征 |
+
+#### metrics.py（指标评估）
+
+| 函数 | 用途 |
+|------|------|
+| `evaluate_model(y_true, y_pred, test_df)` | 完整模型评估（**推荐**） |
+| `quick_eval(y_true, y_pred)` | 快速评估（训练中使用） |
+| `revenue_capture_at_k(y_true, y_pred, k)` | RevCap@K 单指标 |
+| `whale_recall_at_k(...)` | Whale Recall@K |
+| `whale_precision_at_k(...)` | Whale Precision@K |
+| `compute_revcap_curve(...)` | 多 K 值 RevCap 曲线 |
+| `compute_stability_by_day(...)` | 按天稳定性评估 |
+| `EvalResult` | 结果类（支持 .summary()、.to_json()） |
 
 ---
 
@@ -313,6 +374,25 @@ df = df.merge(pair_stats, ...)
 # 特征已经在 prepare_dataset() 中计算好了
 ```
 
+### 错误 4: 自行实现评估指标
+
+```python
+# ❌ 错误（自己算 RevCap）
+def my_revcap(y_true, y_pred, k=0.01):
+    top_k = int(len(y_true) * k)
+    idx = np.argsort(y_pred)[-top_k:]
+    return y_true[idx].sum() / y_true.sum()
+
+# ❌ 错误（用 sklearn 指标作为主指标）
+from sklearn.metrics import mean_absolute_error
+mae = mean_absolute_error(y_test, y_pred)  # 不是业务指标
+
+# ✅ 正确
+from gift_EVpred.metrics import evaluate_model
+result = evaluate_model(y_test, y_pred, test_df)
+print(f"RevCap@1%: {result.revcap_1pct:.1%}")
+```
+
 ---
 
-> **记住**: 使用 `data_utils.py` 是强制要求，不是建议！
+> **记住**: 使用 `data_utils.py` 和 `metrics.py` 是强制要求，不是建议！

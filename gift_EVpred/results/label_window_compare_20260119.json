@@ -1,52 +1,28 @@
-[
-  {
-    "revcap_1":0.2278177859,
-    "revcap_5":0.4581703274,
-    "gift_rate":0.016806985,
-    "total_revenue":2095271.0,
-    "n_samples":1409533,
-    "config":"1h_fixed",
-    "window_minutes":60,
-    "use_live_end":false
+{
+  "1min": {
+    "name": "1min Window",
+    "window_minutes": 1,
+    "test_samples": 1409533,
+    "test_gift_rate": 0.015367501151090467,
+    "test_total_revenue": 1758581.0,
+    "revcap_1pct": 0.5136243368943484,
+    "revcap_0.5pct": 0.4334835870511509,
+    "revcap_2pct": 0.5634019701111294,
+    "whale_recall_1pct": 0.3458683819891143,
+    "whale_precision_1pct": 0.04959205391982973,
+    "cv": 0.09408877883269263
   },
-  {
-    "revcap_1":0.2189573742,
-    "revcap_5":0.4345571628,
-    "gift_rate":0.0162947586,
-    "total_revenue":1944552.0,
-    "n_samples":1409533,
-    "config":"30min_fixed",
-    "window_minutes":30,
-    "use_live_end":false
-  },
-  {
-    "revcap_1":0.2093407009,
-    "revcap_5":0.4302979898,
-    "gift_rate":0.0155931078,
-    "total_revenue":1813183.0,
-    "n_samples":1409533,
-    "config":"10min_fixed",
-    "window_minutes":10,
-    "use_live_end":false
-  },
-  {
-    "revcap_1":0.2278177859,
-    "revcap_5":0.4581703274,
-    "gift_rate":0.016806985,
-    "total_revenue":2095271.0,
-    "n_samples":1409533,
-    "config":"1h_live_end",
-    "window_minutes":60,
-    "use_live_end":true
-  },
-  {
-    "revcap_1":0.2189573742,
-    "revcap_5":0.4345571628,
-    "gift_rate":0.0162947586,
-    "total_revenue":1944552.0,
-    "n_samples":1409533,
-    "config":"30min_live_end",
-    "window_minutes":30,
-    "use_live_end":true
+  "60min": {
+    "name": "60min Window",
+    "window_minutes": 60,
+    "test_samples": 1409533,
+    "test_gift_rate": 0.015530675762823574,
+    "test_total_revenue": 1809367.0,
+    "revcap_1pct": 0.5097733074605649,
+    "revcap_0.5pct": 0.4291788233122412,
+    "revcap_2pct": 0.5592480685234118,
+    "whale_recall_1pct": 0.34563106796116505,
+    "whale_precision_1pct": 0.05051436679673643,
+    "cv": 0.10354861025373066
   }
-]
+}

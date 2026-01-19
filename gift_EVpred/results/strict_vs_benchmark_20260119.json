@@ -1,0 +1,59 @@
+{
+  "strict": {
+    "n_features": 20,
+    "revcap_1pct": 0.5136317292180457,
+    "cv": 0.09381225486442663
+  },
+  "benchmark": {
+    "n_features": 31,
+    "revcap_1pct": 0.5136243368943484,
+    "cv": 0.09408877883269263
+  },
+  "snapshot_importance": {
+    "accu_watch_live_duration": {
+      "rank": 6,
+      "coef": 0.2155852222026007
+    },
+    "fans_num": {
+      "rank": 7,
+      "coef": 0.2044166403461073
+    },
+    "str_accu_live_duration": {
+      "rank": 9,
+      "coef": -0.1721825136199841
+    },
+    "accu_watch_live_cnt": {
+      "rank": 13,
+      "coef": 0.09909163218498915
+    },
+    "str_follow_user_num": {
+      "rank": 14,
+      "coef": -0.09890489711381872
+    },
+    "str_accu_live_cnt": {
+      "rank": 17,
+      "coef": 0.058782640084156186
+    },
+    "follow_num": {
+      "rank": 18,
+      "coef": 0.05143915837369583
+    },
+    "str_accu_play_cnt": {
+      "rank": 20,
+      "coef": 0.03996295110996576
+    },
+    "str_fans_user_num": {
+      "rank": 21,
+      "coef": -0.03818419491214073
+    },
+    "str_fans_group_fans_num": {
+      "rank": 22,
+      "coef": -0.03003836782826782
+    },
+    "str_accu_play_duration": {
+      "rank": 30,
+      "coef": -0.001232193724767416
+    }
+  },
+  "timestamp": "2026-01-19T02:09:37.078868"
+}
