@@ -1,0 +1,66 @@
+{
+  "ridge": {
+    "name": "Ridge",
+    "rev_cap_0.01": 0.526043647814531,
+    "gift_rate_0.01": 0.11074849237318198,
+    "rev_cap_0.05": 0.6471874043978082,
+    "gift_rate_0.05": 0.08032521709518134,
+    "rev_cap_0.1": 0.7014095074097814,
+    "gift_rate_0.1": 0.058083190850850994,
+    "spearman": 0.0643746714428862
+  },
+  "lightgbm": {
+    "name": "LightGBM",
+    "rev_cap_0.01": 0.4497318008028556,
+    "gift_rate_0.01": 0.11053565094004966,
+    "rev_cap_0.05": 0.5280276393841179,
+    "gift_rate_0.05": 0.043149440944434986,
+    "rev_cap_0.1": 0.6485065654991645,
+    "gift_rate_0.1": 0.029463721949869816,
+    "spearman": 0.0503618922345043
+  },
+  "relative_improvement_1pct": -14.506751926140721,
+  "best_iteration": 1,
+  "feature_importance_top10": [
+    {
+      "feature": "user_gift_mean_hist",
+      "importance": 8
+    },
+    {
+      "feature": "user_gift_cnt_hist",
+      "importance": 5
+    },
+    {
+      "feature": "device_price",
+      "importance": 4
+    },
+    {
+      "feature": "pair_gift_mean_hist",
+      "importance": 3
+    },
+    {
+      "feature": "pair_gift_sum_hist",
+      "importance": 3
+    },
+    {
+      "feature": "age",
+      "importance": 3
+    },
+    {
+      "feature": "accu_watch_live_duration",
+      "importance": 3
+    },
+    {
+      "feature": "str_accu_play_duration",
+      "importance": 2
+    },
+    {
+      "feature": "hour",
+      "importance": 2
+    },
+    {
+      "feature": "accu_watch_live_cnt",
+      "importance": 2
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "baseline_direct": {
+    "spearman": 0.10603701162406945,
+    "revenue_capture_1pct": 0.3772671888266482,
+    "revenue_capture_5pct": 0.5983984887873692,
+    "top1_gift_rate": 0.24051081943951755,
+    "oracle_rev_1pct": 0.9954206400985839
+  },
+  "baseline_twostage": {
+    "spearman": 0.09966798856521317,
+    "revenue_capture_1pct": 0.32009224582404855,
+    "revenue_capture_5pct": 0.5462314898645569,
+    "top1_gift_rate": 0.2360411493437389,
+    "oracle_rev_1pct": 0.9954206400985839
+  },
+  "base_seq_direct": {
+    "spearman": 0.10566053985027736,
+    "revenue_capture_1pct": 0.36231971902441257,
+    "revenue_capture_5pct": 0.5805740641664013,
+    "top1_gift_rate": 0.23809861653068465,
+    "oracle_rev_1pct": 0.9954206400985839
+  },
+  "base_seq_twostage": {
+    "spearman": 0.09990145889178864,
+    "revenue_capture_1pct": 0.29272633468415304,
+    "revenue_capture_5pct": 0.5348916679513056,
+    "top1_gift_rate": 0.17360766229159277,
+    "oracle_rev_1pct": 0.9954206400985839
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "direct": {
+    "spearman": 0.10611299338816106,
+    "top1_gift_rate": 0.24051081943951755,
+    "top5_gift_rate": 0.11049151484193201,
+    "revenue_capture_1pct": 0.3772671888266482,
+    "revenue_capture_5pct": 0.5983984887873692,
+    "oracle_rev_1pct": 0.9954206400985839
+  },
+  "twostage": {
+    "spearman": 0.08544792464207342,
+    "top1_gift_rate": 0.1749556580347641,
+    "top5_gift_rate": 0.08438333617117884,
+    "revenue_capture_1pct": 0.44424850055195725,
+    "revenue_capture_5pct": 0.5754124406818975,
+    "oracle_rev_1pct": 0.9954206400985839
+  },
+  "twostage_clf_auc": 0.7336438115533197,
+  "twostage_clf_ap": 0.07159065586793248
+}

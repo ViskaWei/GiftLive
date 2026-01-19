@@ -1,0 +1,20 @@
+{
+  "best_threshold": {
+    "name": "P90",
+    "value": 100.0
+  },
+  "best_combination": "P(whale)*E[whale]",
+  "results": {
+    "two_stage_baseline": {
+      "rev_cap_1": 0.3201,
+      "rev_cap_5": 0.5462
+    },
+    "three_stage_best": {
+      "rev_cap_1": 0.435990380241983,
+      "rev_cap_5": 0.6290799614942411,
+      "gift_rate_1": 0.190138346931536,
+      "spearman": 0.06813469729317212
+    }
+  },
+  "improvement": 36.204429941263044
+}

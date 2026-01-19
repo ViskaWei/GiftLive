@@ -1,601 +1,298 @@
 # 🧠 gift_EVpred Hub
-> **ID:** EXP-20260118-gift_EVpred-hub | **Status:** 🌱探索 |
+> **ID:** EXP-20260118-gift_EVpred-hub | **Status:** 🌷 收敛（识别大哥阶段）
 > **Date:** 2026-01-18 | **Update:** 2026-01-18
 
 ---
 
-## 🔴 Gate-0 结果：泄漏已消除，但性能不达标（2026-01-18）
+| # | 💡 共识 | 证据 | 决策 |
+|---|--------|------|------|
+| K1 | **排序/分配 > 逐条预测**：不需要预测准每一条，把高价值放对位置即可 | RevCap vs MAE | 评估用 RevCap@K |
+| K2 | **Raw Y 优于 Log(1+Y)**：log 变换压缩 whale 信号 | RevCap +39.6% | 预测目标用 raw Y |
+| K3 | **RevCap ≠ Spearman**：整体排序不重要，头部精准更重要 | 负相关 | 用 RevCap 评估 |
+| K4 | **历史打赏是最强信号**：pair-level 历史 > user/streamer 全局 | 系数 0.194 | 重点挖掘 pair 特征 |
+| K5 | **时间窗纪律**：任何特征必须是 t_click 之前可得 | 200/200 通过 | Day-Frozen / Rolling |
+| K6 | **watch_live_time 是 post-treatment**：包含打赏后停留，click 时刻不可得 | 因果分析 | 删除当前 session；可用历史先验 |
 
-> **核心发现**：数据泄漏已成功消除（特征重要性比 1.23 < 2x），但去除泄漏后性能大幅下降（Top-1% 从 56.2% 降至 **11.6%**），揭示原 baseline **几乎全部预测能力来自数据泄漏**。
+**🦾 现阶段信念**
+- **Direct + raw Y 是当前最优方案** → RevCap@1%=52.68%，比 log Y 提升 39.6%
+- **目前专注"识别大哥"**，暂不考虑分配优化 → 先做好 EV 预测这个基础模块
+- **Frozen 特征已够用**，Rolling 是后续迭代方向 → 当前不增加复杂度
+- **Linear 模型可能已到瓶颈** → LightGBM 可能带来非线性提升
+- **✅ data_utils.py 已验证通过** → Expert Review 的 4 个问题经验证：3 个不存在，1 个已修复
 
-| 指标 | Gate-0 目标 | 实际值 | 状态 |
-|------|-------------|--------|------|
-| 特征重要性比 | < 2x | **1.23** | ✅ 泄漏消除 |
-| Top-1% Capture | > 40% | **11.6%** | ❌ 不达标 |
-| Revenue Capture@1% | > 50% | **21.6%** | ❌ 不达标 |
-| Spearman | 下降 < 0.2 | **0.14**（-0.75） | ❌ 不达标 |
+**👣 下一步最有价值**
+- 🔴 **P0-Model**：LightGBM + raw Y → If RevCap > 55% then 确认非线性有效；Else 转向特征工程
+- 🟡 **P1**：历史观看先验特征（user/pair 历史平均观看时长） → 替代被删除的 watch_live_time
 
-### 关键结论
-1. **原 baseline 是"开卷考试"**：模型通过泄漏的 `pair_gift_mean` 直接"看到"答案
-2. **礼物预测极具挑战性**：98.5% 稀疏性 + 极端重尾分布，当前特征预测力接近随机
-3. **需要全面重构特征工程**：探索序列特征、实时特征、内容匹配度等新信号源
-4. **🔴 Rolling 版本存在严重泄漏（MVP-1.1 已确认）**：81.1% vs Frozen 11.5%，100% 样本含未来数据，实现使用 `groupby().agg()` 而非 `cumsum+shift`，**已放弃 Rolling**
+> **权威数字**：Best=52.68% RevCap@1%；Baseline=37.73%；Δ=+39.6%；条件=Direct Ridge + raw Y, Day-Frozen
 
----
+| 模型/方法 | RevCap@1% | 配置 | 备注 |
+|-----------|-----------|------|------|
+| **Direct + raw Y** | **52.68%** | Ridge, raw Y | ✅ 当前最优 (B2) |
+| Two-Stage + raw Y | 45.66% | LR + Ridge, raw Y | B2 变体 |
+| Direct + log Y | 37.73% | Ridge, log(1+Y) | B2 baseline |
+| Whale-only (P90) | 43.60% | LR + LR + Ridge | Three-Stage |
+| Oracle | 99.54% | 真实 top-1% | 理论上界 |
 
-## ⚠️ 关键问题诊断（原始分析）
+**Baseline 层级**（用于对照"是否有用"）：
+| 层级 | 方法 | RevCap@1% | 说明 |
+|------|------|-----------|------|
+| B0 | Random | ~1% | 随机排序 |
+| B1 | Popularity | 待测 | 按主播热度排序 |
+| **B2** | **Direct + raw Y** | **52.68%** | **当前 ML baseline** |
 
-> **背景**：现有 baseline（EXP-20260108-gift-allocation-02）存在**三个致命问题**，导致 Top-1%=56.2%、Spearman=0.891 的结果**不可信**。
-
-| # | 问题 | 严重性 | 证据 | 影响 |
-|---|------|--------|------|------|
-| **P1** | **数据泄漏 (Target Leakage)** | 🔴 致命 | `pair_gift_mean` 重要性=328,571，远超第二名 3 倍；在 pair_gift_count=1 的样本上，`pair_gift_mean == gift_price`（特征=答案） | Baseline 性能虚高，无法作为可靠参照 |
-| **P2** | **任务定义不匹配** | 🔴 致命 | 样本单元=gift-only（72,646 条已送礼记录），学的是 $E[\text{gift}|\text{已送礼}]$，而非 $EV = E[\text{gift}|\text{session}]$（含 0） | 模型无法学到"谁不会送礼"，不能支持分配决策 |
-| **P3** | **评估指标偏差** | 🟡 中等 | Top-K% Capture 是"集合重叠比例"，不关心金额差异（漏掉超大额 vs 漏掉边缘 top1% 在业务上完全不同） | 应改用 Revenue Capture@K = $\frac{\sum_{i \in \text{TopK}(\hat{v})} Y_i}{\sum_i Y_i}$ |
-| **P4** | **样本选择偏差** | 🟡 中等 | KuaiLive 23,400 用户是"多行为活跃用户子集"，`gift_rate` 接近 100%（全站稀疏率 ~1.48%） | 适合研究"金主分配"，但不能外推全站转化/留存 |
-
-### 为什么 `pair_gift_mean/sum` 是泄漏？（直觉版）
-
-```
-在 gift-only 数据里，对很多 (user, streamer) 配对：
-- pair_gift_count 很可能是 1（只送过一次）
-- 那么 pair_gift_sum == gift_price，pair_gift_mean == gift_price
-
-→ 特征里直接包含了当前样本的真实 label（甚至就是同一个数）
-→ 模型当然"预测很准"，重要性也会爆炸
-→ 这不是"特征很强"，而是"特征在很多样本上等于答案"
-```
-
-### 合理 vs 泄漏的特征设计
-
-| 允许 ✅ | 泄漏 ❌ |
-|---------|---------|
-| `pair_gift_sum_past(t)` = 只用 **t 之前** 的历史累计 | `pair_gift_sum_all` = 用全量数据聚合后回填（包含 t 之后、包含当条样本自身） |
-| `user_total_gift_7d_past` = 只用过去 7 天 | `user_total_gift` = 用全量数据 |
-| 冻结版：只用 train window 统计 | 回填版：groupby 后 merge 回原表 |
+**MVP 验收标准**：
+- 离线：Top 1% 捕获 >50% 收入（当前 52.68% ✅）
+- 在线：Revenue per DAU 正向，留存/生态指标不恶化
 
 ---
 
-| # | 💡 共识[抽象洞见] | 证据 | 决策 |
-|---|----------------------------|----------------|------|
-| K1 | **Direct Regression 优于 Two-Stage 做全量排序** | Direct Top-1%=54.5% vs Two-Stage=35.7%（⚠️ 需在无泄漏版本复验） | 采用 Direct 做召回层 |
-| K2 | **Two-Stage 在精排场景有优势** | Stage2 在 gift 子集 Spearman=0.89 > Direct=0.74 | 推荐召回-精排分工策略 |
-| K3 | **Revenue Capture@K 是核心评估指标** | ~~Baseline Top-1%=56.2%~~（虚高） | 聚焦 Revenue Capture@K 而非集合重叠 |
-| K4 | **⚠️ 现有 Baseline 因泄漏不可信** | `pair_gift_mean` 重要性异常、Spearman=0.891 虚高 | 必须先跑 Past-only 无泄漏版本 |
-| K5 | **任务定义必须改为 Click-Level EV** | gift-only 无法学到"谁不会送礼" | 从 gift-only 改为 click（含 0） |
+## 1) 🎯 任务定义
 
-<!-- ⚠️ 写作指导（此注释不要复制到实际报告）：
-     共识 ≠ 数值。共识是抽象的、可泛化的洞见；数值放证据列。
--->
+### 1.1 问题设定
 
-**🦾 现阶段信念 [≤10条，写"所以呢"]**
-- **✅ 数据泄漏已消除**（特征重要性比 1.23） → 基础设施正确，可以做可靠实验
-- **❌ 当前特征体系预测力极弱**（Top-1%=11.6%，Spearman=0.14） → 需要全面重构特征工程
-- **礼物预测是极具挑战性的任务**（98.5% 稀疏性 + 重尾分布） → 可能需要降低任务难度或探索新信号源
-- **原 baseline 高性能是假象**（泄漏导致 Top-1%=56.2%） → 所有基于泄漏版本的结论需重新评估
-- **Direct vs Two-Stage 结论无法验证**（两者都很差） → 需在性能合理的版本上重新比较
-- **Revenue Capture@K 是正确的评估指标** → 已实现，可用于后续实验
-- **时间切分 + Past-only 特征是正确的** → 方法论正确，问题在于特征信号不足
-- **可能需要考虑序列特征或实时特征** → 用户观看时长、当前 session 互动可能是关键信号
-
-**👣 下一步最有价值  [≤5条，直接可进 Roadmap Gate]**
-- ✅ ~~**P0**：诊断 Rolling 泄漏（MVP-1.1）~~ → **已完成，确认严重泄漏，放弃 Rolling 版本**
-- ✅ ~~**P0**：估计层审计（MVP-1.6）~~ → **已完成，审计通过，发现标签窗口差异显著（16.51%），建议 watch_time 截断**
-- ✅ ~~**P0**：重构特征工程（MVP-1.2）~~ → **已完成，watch_time 是最强信号（Top-1%=19.8%，+94% vs baseline），但未达 30% 目标**
-- ✅ ~~**P0**：任务降级验证（MVP-1.3）~~ → **已完成，二分类 AUC=0.61（<0.70），但 Prec@1%=19.24%（>5%），可用于召回；Two-Stage 改进版 RevCap@1%=25.9%**
-- ✅ ~~**P1**：切片评估（MVP-1.4）~~ → **已完成，冷启动是致命瓶颈（RevCap@1%=3.2%，仅为基线 16%）**
-- ✅ ~~**P1**：校准评估（MVP-1.5）~~ → **已完成，回归严重低估（预测均值 0.0008 vs 实际 1.22，低估 1500x）**
-- 🔴 **P0**：深化实时特征工程 → 基于 watch_time 的成功，探索更多 session-level 特征（互动序列、停留曲线、峰值时段）
-- 🔴 **P0**：冷启动策略设计 → 针对 61.5% 冷启动 pair，设计 fallback（popularity/协同过滤）或内容特征
-- 🟡 **P1**：标签窗口优化 → 使用 watch_time 截断或更短 H（10min/30min），减少伪标签
-
-
-> **权威数字（一行即可）**：~~Baseline=56.2%~~（⚠️ 泄漏无效）；无泄漏 Baseline=11.6%（性能不达标）；最佳性能=19.8%（MVP-1.2 baseline+rt，+94% vs baseline）；Two-Stage 改进=25.9%（RevCap@1%）
-
-| 模型/方法 | 指标值 | 配置 | 备注 |
-|-----------|--------|------|------|
-| Direct Regression | Top-1%=54.5%, Spearman=0.331 | LightGBM, log(1+Y), click全量 | ⚠️ 需无泄漏版本复验 |
-| Two-Stage | Top-1%=35.7%, NDCG@100=0.359 | p(x)×m(x), click全量 | ⚠️ 需无泄漏版本复验 |
-| ~~Baseline (gift-only)~~ | ~~Top-1%=56.2%, Spearman=0.891~~ | ~~LightGBM, log(1+Y), gift-only~~ | ❌ 数据泄漏，结果无效 |
-| Oracle p (Two-Stage) | Top-1%=90.7% | 真实 p(x) | Stage1 理论上界 |
-| Oracle m (Two-Stage) | Top-1%=38.9% | 真实 m(x) | Stage2 理论上界 |
-| **Leakage-Free (Frozen)** | **Top-1%=11.5%, Spearman=0.10, RevCap@1%=21.3%** | **Past-only, click-level, frozen, LightGBM** | ❌ Gate-0 失败，性能不达标 |
-| **Estimation Audit (Frozen)** | **RevCap@1%=25.9%, Spearman=0.034** | **Past-only, click-level, frozen, Ridge Regression** | ✅ MVP-1.6 完成，简单模型可学习有意义模式 |
-| ~~Leakage-Free (Rolling)~~ | ~~Top-1%=81.1%, Spearman=0.52, RevCap@1%=98.7%~~ | ~~Past-only, click-level, rolling~~ | ❌ **MVP-1.1 确认泄漏，已废弃** |
-| **Slice Evaluation (Frozen)** | **全量 RevCap@1%=20.8%, 冷启动 pair=3.2%, 热启动=31.1%** | **MVP-1.4 切片评估** | ✅ MVP-1.4 完成，冷启动是致命瓶颈 |
-| **Calibration Evaluation** | **分类 ECE=0, 回归 ECE=1.22 (低估 1500x)** | **MVP-1.5 校准评估** | ✅ MVP-1.5 完成，回归需校准层 |
-| **Feature V2 (baseline+rt)** | **Top-1%=19.8%, RevCap@1%=17.3%, Spearman=0.4051** | **MVP-1.2 最佳单组** | ✅ MVP-1.2 完成，watch_time 是最强信号 |
-| **Feature V2 (all)** | **Top-1%=16.7%, RevCap@1%=17.4%, Spearman=0.4059** | **MVP-1.2 全特征** | ⚠️ 组合不优于单组最佳 |
-
-
-
-## 1) 🌲 核心假设树
 ```
-🌲 核心: 如何建模和评估 EV（期望打赏）以支持排序/分配决策？
-│
-├── Q0: 基础设施正确性【✅ 已验证，❌ 性能不达标】
-│   ├── Q0.1: 现有特征是否有泄漏？ → ✅ 已消除（特征重要性比 1.23 < 2x）
-│   ├── Q0.2: 任务定义是否正确？ → ✅ 已修正（click-level 含 0，Y=0 占比 98.5%）
-│   ├── Q0.3: 评估指标是否对齐业务？ → ✅ 已实现（Revenue Capture@K）
-│   ├── Q0.4: Past-only 特征能否支撑预测？ → ❌ 不能（Top-1%=11.6%，性能接近随机）
-│   └── Q0.5: 估计层问题定义是否完整可审计？ → ✅ **MVP-1.6 完成：审计通过，发现标签窗口问题**
-│       ├── H6.1: 预测目标（r_rev/r_usr/r_eco）口径清晰 → ✅ 确认（r_rev 口径清晰，action 映射明确）
-│       ├── H6.2: 样本单位（click/session/impression）定义正确 → ✅ 确认（click-level 含 0，正样本率 1.50%）
-│       ├── H6.3: 时间切分边界可审计 → ✅ 确认（Train 13天/Val 3天/Test 3天，无重叠）
-│       ├── H6.4: 标签窗口 vs 观看时长截断一致 → 🔴 **发现显著差异（16.51%），建议 watch_time 截断**
-│       ├── H6.5: 特征严格 past-only → ✅ 确认（Frozen 特征无泄漏，37,595 pairs）
-│       └── H6.6: 简单模型（Logistic/Linear）能跑通 → ✅ 确认（Set-1 RevCap@1%=25.9%，Train>Test）
-│
-├── Q1: 如何建模 EV？【需在 Q0 解决后验证】
-│   ├── Q1.1: Direct Regression vs Two-Stage？ → ⚠️ 需在无泄漏版本复验
-│   ├── Q1.2: 多任务学习是否有帮助？ → ❌ 无收益（PR-AUC 反降 1.76pp）
-│   ├── Q1.3: 延迟建模是否需要？ → ✅ Baseline 足够（ECE=0.018 优于 Chapelle=0.028）
-│   ├── Q1.4: 召回-精排分工是否有效？ → 🔆 待在无泄漏版本验证
-│   ├── Q1.5: Rolling 实现是否有泄漏？ → ✅ **已确认泄漏（MVP-1.1）**
-│   │   └── H1.1: cumsum+shift 实现正确 → ❌ 否，实际用 groupby().agg()，100% 样本含未来数据
-│   ├── Q1.6: 新特征是否能提升预测力？ → ⚠️ **MVP-1.2 有泄漏，需重做**
-│   │   ├── H2.1: 序列特征有提升 → ⚠️ **需重验（pair_seq_3_mean 有泄漏）**
-│   │   ├── H2.2: 实时上下文有提升 → ❌ **watch_time 有结果泄漏，原结论无效**
-│   │   ├── H2.3: 内容匹配度有提升 → ❌ **-1.0%（无泄漏，确实无效）**
-│   │   └── H2.4: 组合特征有叠加效果 → ⚠️ **需重验（泄漏特征主导）**
-│   └── Q1.7: 二分类任务是否可行？ → ✅ **MVP-1.3 完成**
-│       ├── H3.1: 二分类 AUC > 0.7 → ❌ **未达标（AUC=0.61 < 0.70）**
-│       ├── H3.2: 分类比回归简单 → ⚠️ **相似难度（AUC~0.61 vs Spearman~0.10）**
-│       ├── H3.3: 二分类可用于召回 → ✅ **Precision@1%=19.24% > 5%**
-│       └── H3.4: 二分类+回归优于纯回归 → ⚠️ **Two-Stage 改进版 RevCap@1%=25.9% vs 21.6%（+4.3pp）**
-│       ├── H3.1: 二分类 AUC > 0.7 → 可用于召回/筛选
-│       ├── H3.2: 分类比回归简单 → 对比 AUC vs Spearman 排名一致性
-│       ├── H3.3: 二分类可用于召回 → Precision@1% > 5%
-│       └── H3.4: 二分类+回归优于纯回归 → Two-Stage 改进版
-│
-├── Q2: 如何评估 EV 模型？
-│   ├── Q2.1: Revenue Capture@K 是否更贴近业务？ → ✅ 已实现（MVP-1.0）
-│   ├── Q2.2: 分桶校准（ECE）是否必要？ → ✅ **MVP-1.5 完成：回归严重低估 1500x**
-│   │   ├── H4.1: 分类 ECE < 0.03 → ✅ 确认（ECE=0，需 empirical 校准）
-│   │   ├── H4.2: 高预测分桶可能存在高估 → ❌ 否定（所有分桶都低估）
-│   │   └── H4.3: 需要校准层 → ✅ 确认（需 Two-Stage 或 isotonic）
-│   ├── Q2.3: 切片评估（冷启动/Top-1%/长尾）是否必要？ → ✅ **MVP-1.4 完成：冷启动是致命瓶颈**
-│   │   ├── H5.1: 冷启动 pair 性能 < 全量 50% → ✅ 确认（3.2% vs 20.8%，仅 16%）
-│   │   ├── H5.2: 冷启动 streamer 性能下降显著 → ✅ 确认（0.7% vs 20.8%，仅 3%）
-│   │   ├── H5.3: Top-1% user 预测更准 → ❌ 否定（12.3% < 20.8%）
-│   │   └── H5.4: 长尾 user 预测接近随机 → ✅ 确认（1.5%，~随机）
-│   ├── Q2.4: OPE 方法有效性？ → ✅ SNIPS 可用（相对误差 < 10%）
-│   └── Q2.5: 时间切分 + Past-only 是否必须？ → ✅ 必须（避免泄漏）
-│
-├── Q3: 如何优化 EV 模型？
-│   ├── Q3.1: 实时上下文特征是否有帮助？ → ⏳ 待验证（需先完成 Q0）
-│   └── Q3.2: 长期画像 vs 实时会话？ → ⏳ 待验证
-│
-└── Q4: 如何支持长期全局目标（分配优化）？【新增】
-    ├── Q4.1: 估计层输出是否足够支持分配决策？ → ⏳ 待验证
-    ├── Q4.2: 如何建模主播生态健康（外部性/约束）？ → ⏳ 待验证
-    ├── Q4.3: 模拟器能否填补数据不足？ → ⏳ 待验证
-    └── Q4.4: KuaiLive 数据能否外推到全站？ → ❌ 否（样本选择偏差，只能研究活跃用户子集）
+【Click-level EV 预测】
 
-Legend: ✅ 已验证 | ❌ 已否定 | 🔆 进行中 | ⏳ 待验证 | 🗑️ 已关闭 | ⚠️ 需复验
+输入：(user_id, streamer_id, live_id, t_click) + 进入时刻可用特征
+输出：未来窗口 [t_click, t_click+W] 内礼物金额总和的期望 (EV)
+标签：gift_price_label = sum(gift_price) within window W
 ```
 
-## 2) 口径冻结（唯一权威）
+| 项 | 规格 |
+|---|---|
+| 预测粒度 | Click-level（用户进入直播间时刻） |
+| 标签窗口 | W = 1 hour |
+| 预测目标 | **raw Y**（非 log(1+Y)） |
+| 辅助标签 | is_gift = (gift_price_label > 0) |
 
-> **⚠️ 重要更新（2026-01-18）**：修正任务定义和特征规范
+### 1.2 业务目标
 
-| 项目 | 规格 | 变更说明 |
-|---|---|---|
-| Dataset / Version | KuaiLive 数据集 | - |
-| **样本单元** | **Click-level（含 0）** | ❌ 不再使用 gift-only |
-| **样本构造** | click 后 H=1h 内 gift 总额 | 包含未送礼的 click（Y=0） |
-| Train / Val / Test | 按时间切分：前 70% / 中间 15% / 最后 15% 天 | - |
-| **特征约束** | **Past-only**（冻结版 + 滚动版） | ❌ 禁止全量聚合回填 |
-| **主指标** | **Revenue Capture@K%**（Top-1%, Top-5%） | ❌ 不再使用"集合重叠"定义 |
-| 辅助指标 | Spearman, NDCG@100, ECE（校准） | 新增校准和切片评估 |
-| Seed / Repeats | 固定 seed=42，多次运行取均值 | - |
-| 目标变量 | log(1 + gift_amount)，Y=0 表示无打赏 | - |
+```
+当前阶段目标：识别"大哥"（高价值打赏用户）
+下游应用：分配优化（把大哥分配给合适的主播）
+```
 
-### 指标定义（唯一权威）
+| 阶段 | 目标 | 指标 |
+|------|------|------|
+| **Phase 1（当前）** | 识别大哥 + 预测打赏金额 | Revenue Capture @K |
+| Phase 2（后续） | User-Streamer 偏好匹配 | 待定 |
+| Phase 3（远期） | 分配优化 + 长期收益 | Total Revenue + LTV |
 
-| 指标 | 定义 | 用途 |
-|---|---|---|
-| **Revenue Capture@K%** | $\text{RevShare@K} = \frac{\sum_{i \in \text{TopK}(\hat{v})} Y_i}{\sum_i Y_i}$ | 主指标：捕获多少收入（金额占比） |
-| Top-K% Capture（旧） | $\text{Overlap@K} = \frac{|\text{TopK}(\hat{v}) \cap \text{TopK}(Y)|}{|\text{TopK}(Y)|}$ | ❌ 废弃：仅是集合重叠 |
-| ECE | Expected Calibration Error | 校准：分桶预测 vs 实际 |
+### 1.3 特征构造策略
+
+| 策略 | 定义 | 状态 | 适用场景 |
+|------|------|------|---------|
+| **A. Frozen** | 仅用 Train 窗口内历史计算统计量；Val/Test 只查表 | ✅ 当前使用 | 快速迭代、无泄漏保证 |
+| B. Rolling | 对每个 click 严格用 `gift_ts < click_ts` 构造特征 | ⏳ 后续迭代 | 更精确、在线推理对齐 |
+
+**当前选择 Frozen 的原因**：
+1. 实现简单，无泄漏风险
+2. 已验证 200/200 样本通过
+3. 当前阶段专注模型和目标变量选择，不增加特征复杂度
+
+---
+
+## 2) 🌲 核心假设树
+
+```
+🌲 核心: 如何建模 EV（期望打赏）以识别高价值用户？
+│
+├── Q0: 基础设施正确性 ✅
+│   ├── Q0.1: 数据泄漏已消除？ → ✅ Day-Frozen，200/200 验证通过
+│   ├── Q0.2: 任务定义正确？ → ✅ Click-level，gift_rate ~1.5%
+│   └── Q0.3: 评估指标对齐业务？ → ✅ Revenue Capture @K
+│
+├── Q1: 如何建模 EV？ ✅ 已收敛
+│   ├── Q1.1: Direct vs Two-Stage？ → ✅ Direct 更优（RevCap 52.68% vs 45.66%）
+│   ├── Q1.2: Raw Y vs Log(1+Y)？ → ✅ Raw Y 显著更优（+39.6%）
+│   ├── Q1.3: Three-Stage Whale-only？ → ❌ 不如 Direct raw Y
+│   └── Q1.4: 最强特征？ → ✅ pair_gift_cnt_hist
+│
+└── Q2: 下一步优化方向？ ⏳
+    ├── Q2.1: LightGBM 替代 Linear？ → 🔆 进行中
+    ├── Q2.2: Whale-specific 特征？ → ⏳ 待验证
+    └── Q2.3: Rolling 特征？ → ⏳ 后续迭代
+
+Legend: ✅ 已验证 | ❌ 已否定 | ⏳ 待验证
+```
+
+---
+
+## 3) 口径冻结（唯一权威）
+
+| 项目 | 规格 |
+|---|---|
+| Dataset | KuaiLive (`data/KuaiLive/`) |
+| Train / Val / Test | 1,629,415 / 1,717,199 / 1,409,533 (7-7-7 by days) |
+| 时间范围 | 2025-05-04 ~ 2025-05-24 |
+| 特征 | 31 个 Day-Frozen 特征 |
+| Metric | **Revenue Capture @1%**（主指标） |
+| 标签窗口 | 1 hour |
+| Seed | 42 |
 
 > 规则：任何口径变更必须写入 §8 变更日志。
+
 ---
-## 3) 当前答案 & 战略推荐（对齐问题树）
 
-### 3.1 战略推荐（只保留"当前推荐"）
+## 4) 当前答案 & 战略推荐
 
-> **⚠️ 当前阻塞**：所有架构选择需在 **Q0（基础设施正确性）** 解决后复验
+### 4.1 战略推荐
 
-- **推荐路线：Route 0 (Fix Foundation)**（先修复泄漏和任务定义，再验证架构选择）
-- 需要 Roadmap 关闭的 Gate：**Gate-0（无泄漏 Baseline）** → Gate-1（架构选择复验）
+- **推荐路线：Direct + raw Y + LightGBM**（理由：Linear 已到瓶颈，非线性可能进一步提升）
+- 需要 Roadmap 关闭的 Gate：Gate-2（LightGBM 验证）
 
-| Route | 一句话定位 | 当前倾向 | 关键理由 | 需要的 Gate |
+| Route | 一句话定位 | 当前倾向 | 关键理由 |
+|---|---|---|---|
+| Route A: Direct + raw Y (Linear) | 简单有效的 baseline | 🟢 已验证 | RevCap=52.68% |
+| Route B: Two-Stage | 分阶段建模 | 🟡 次选 | RevCap=45.66%，不如 Direct |
+| **Route C: Direct + raw Y + LightGBM** | 非线性提升 | 🔴 待验证 | 预期进一步提升 |
+
+### 4.2 分支答案表
+
+| 分支 | 当前答案 | 置信度 | 决策含义 | 证据 |
 |---|---|---|---|---|
-| **Route 0 (Fix)** | 修复泄漏 + 任务定义 | 🔴 **最高优先级** | 现有结果不可信 | **Gate-0** |
-| Route Direct | Direct Regression 全量排序 | 🟡 待复验 | Top-1%=54.5%（可能有泄漏） | Gate-1 |
-| Route Two-Stage | Two-Stage 全量排序 | 🟡 待复验 | Top-1%=35.7%（可能有泄漏） | Gate-1 |
-| Route 分工 | Direct 召回 + Two-Stage 精排 | ⏳ 暂缓 | 需先完成 Gate-0 和 Gate-1 | Gate-2 |
-| Route 分配优化 | EV → 约束优化 → 分配决策 | ⏳ 远期 | 估计层完成后探索 | Gate-3 |
+| Q1.1 Direct vs Two-Stage | Direct 更优 | 🟢 | 不用 Two-Stage | exp_raw_vs_log |
+| Q1.2 Raw Y vs Log Y | Raw Y 显著更优 | 🟢 | 预测目标用 raw Y | exp_raw_vs_log |
+| Q1.3 Three-Stage | 不如 Direct | 🟢 | 不用 Three-Stage | exp_three_stage |
 
-### 3.2 分支答案表（每行必须回答"所以呢"）
+---
 
-| 分支 | 当前答案（1句话） | 置信度 | 决策含义（So what） | 证据（exp/MVP） |
+## 5) 洞见汇合
+
+> 只收录"会改变决策"的洞见
+
+### 5.1 方法论洞见（EV 建模通用）
+
+| # | 洞见 | 观察 | 解释 | 决策影响 |
 |---|---|---|---|---|
-| **Q0.1: 现有特征是否泄漏** | ❌ 是，`pair_gift_mean/sum` 是泄漏特征 | 🔴 确认 | 必须改为 past-only 特征 | exp_baseline（重要性异常） |
-| **Q0.2: 任务定义是否正确** | ❌ 否，gift-only ≠ EV | 🔴 确认 | 必须改为 click-level（含 0） | 任务定义分析 |
-| **Q0.3: 评估指标是否对齐** | ❌ 否，Top-K% ≠ Revenue Capture | 🔴 确认 | 必须改用 Revenue Capture@K | 指标定义分析 |
-| Q0.4: Past-only 特征能否消除泄漏 | ❌ 不能（Top-1%=11.6%） | 🔴 确认 | 特征体系正确但预测力极弱 | MVP-1.0 |
-| Q0.5: 估计层问题定义是否完整可审计 | ✅ 通过：预测目标+IO口径+无泄漏，发现标签窗口问题 | ✅ 确认 | 问题定义清晰，可服务在线分配（RevCap@1%=25.9%） | MVP-1.6 |
-| Q1.1: Direct vs Two-Stage | Direct 领先 18.8pp | ⚠️ 需复验 | 需在无泄漏版本上确认结论稳定性 | exp_fair_comparison（可能有泄漏） |
-| Q1.2: 多任务学习 | 无收益，PR-AUC 反降 1.76pp | 🟢 高 | 保留单任务方案 | exp_multitask |
-| Q1.3: 延迟建模 | Baseline 足够，无需复杂校正 | 🟢 中 | 保持简单架构 | exp_delay_modeling |
-| Q1.4: 召回-精排分工 | Stage2 精排有潜力 | ⏳ 暂缓 | 需先完成 Q0 | exp_two_stage_diagnosis |
-| Q2.1: Revenue Capture@K | 待验证：是否更贴近业务 | 🔆 进行中 | 作为新主指标 | MVP-1.0 |
-| Q2.2: OPE 方法 | SNIPS 可用 | 🟢 中 | 可用于策略离线评估 | exp_ope_validation |
-| **Q4.4: 数据能否外推全站** | ❌ 否，样本选择偏差 | 🔴 确认 | 重新表述问题为"活跃用户子集的金主分配" | 数据分析 |
----
-## 4) 洞见汇合（多实验 → 共识）
-
-## 🔴 新增关键洞见（2026-01-18 更新）
-
-### I0: 数据泄漏会制造"虚假高性能"——必须先修复基础设施
-
-**观察**：Baseline Top-1%=56.2%、Spearman=0.891 看起来很强，但 `pair_gift_mean` 重要性=328,571，远超其他特征 3 倍以上。
-
-**解释**：在 gift-only 数据里，很多 (user, streamer) 配对只有 1 次送礼记录：
-- `pair_gift_count = 1` → `pair_gift_mean == pair_gift_sum == gift_price`（当前样本的真实 label）
-- 模型用"答案"预测"答案"，当然准确率爆表
-- 这不是"特征很强"，而是"作弊特征"
-
-**决策影响**：
-- ❌ 现有 Baseline 不能作为可靠参照
-- ✅ 必须用 **past-only 特征**（冻结版或滚动版）重跑
-- ✅ 所有聚合特征必须满足：`t < t_impression`（只用该样本发生之前的历史）
-
-### I0a: 任务定义决定模型能学到什么——gift-only ≠ EV
-
-**观察**：gift-only baseline 学的是 $E[\text{gift\_amount} | \text{已送礼}]$，但业务需要的是 $EV = E[\text{gift\_amount} | \text{session}]$（包含 0）。
-
-**解释**：
-- gift-only 模型**看不到"谁不会送礼"**——因为样本里没有 Y=0 的 click
-- KuaiLive 真实稀疏率 ~1.48%（per-click），但 gift-only 里 100% 都是送礼
-- 这导致模型无法学到"区分会/不会送礼"的能力
-
-**决策影响**：
-- ❌ 不再使用 gift-only 作为样本单元
-- ✅ 改用 **click-level**（click 后 H=1h 内的 gift 总额，未送礼则 Y=0）
-- ✅ 如果需要更细粒度，可用 session-level 或 impression-level
-
-### I0b: 评估指标必须对齐业务——"捕获多少人" ≠ "捕获多少钱"
-
-**观察**：Top-K% Capture 是"集合重叠比例"，不关心金额差异。
-
-**解释**：
-- 漏掉 1 个超大额（如 1488 元） vs 漏掉 1 个边缘 Top-1%（如 10 元），在业务上完全不同
-- 但 Top-K% Capture 只看"有没有捕获"，不看"捕获了多少钱"
-- 这会误导模型选择
-
-**决策影响**：
-- ❌ 废弃 Top-K% Capture（集合重叠）
-- ✅ 改用 **Revenue Capture@K** = $\frac{\sum_{i \in \text{TopK}(\hat{v})} Y_i}{\sum_i Y_i}$
-- ✅ 新增分桶校准（ECE）和切片评估（冷启动/Top-1%/长尾）
-
-### I0c: 标签窗口设计必须考虑观看时长——固定窗口引入伪标签
-
-**观察**：固定 1h 标签窗口 vs watch_time 截断差异 16.51%，短观看时长（<30s）差异高达 65-68%。
-
-**解释**：
-- 用户观看时长中位数仅 4s，但固定 1h 窗口会记录"用户已离开但仍在窗口内"的礼物
-- 这导致大量伪标签：用户实际只看了 5s，但标签窗口记录 1h 内的所有礼物
-- 短观看时长分桶（<5s、5-30s）差异最大，说明这些样本的标签最不可靠
-
-**决策影响**：
-- 🔴 **必须使用 watch_time 截断**：`Y_i^{(cap)} = \sum_j a_j \mathbf{1}[t_i \le t_j \le \min(t_i+w_i, t_i+H)]`
-- 🟡 或使用更短的 H（10min/30min）减少伪标签
-- ✅ 对于 watch_time < 阈值（如 5s）的样本，可考虑排除或单独建模
-
-### I0d: apply_frozen_features 性能优化——使用 merge 代替 iterrows()
-
-**观察**：原始 `apply_frozen_features` 使用 `iterrows()`，对 490 万条记录预计需要数小时。
-
-**解释**：
-- `iterrows()` 逐行处理，Python 开销巨大
-- Pair 和 Streamer 特征可以通过 `merge()` 向量化匹配
-- User 特征已使用 `map()`，无需优化
-
-**决策影响**：
-- ✅ **使用优化版本**：`apply_frozen_features_optimized()`（速度提升 107.83x）
-- ✅ **实现 lookup 表缓存**：相同 train window 可复用，避免重复计算
-- ✅ 对于大数据集（>1M 行），必须使用优化版本
-
----
-
-## 核心洞见：EV 模型建模方法论
-
-### I1: 无常 ≠ 不能建模：预测的是"分布"，不是"确定性"
-
-**观察**：单次打赏受情绪、偶然事件、社交氛围影响很大，难以精确预测。
-
-**解释**：但在规模上（成千上万用户×直播间×时段），条件概率是稳定的：
-- 同一个人：不同时间、不同主播、不同互动深度，打赏概率差很多
-- 不同人：有的人"几乎不打赏"，有的人"偶尔爆发"，还有少数"稳定高消费"
-
-**决策影响**：模型要学到这些系统性差异，哪怕只把排序/分配的"Top 区域"做对一点点，也会有价值。
-
-### I2: "真的有用"的地方通常在：排序/分配，而不是逐条预测
-
-**观察**：最常见的可用目标是 EV（期望打赏）：
-$$EV = P(gift > 0 | context) \times E(amount | gift > 0, context)$$
-
-**解释**：你拿 EV 做：
-- 给用户推荐哪些直播间/主播（排序）
-- 给主播分配曝光/流量（资源分配）
-- 识别"高潜会话"做干预（券、引导、互动策略）
-
-**决策影响**：不需要"预测准每一次"，需要"把更可能产生价值的放到更好的位置"。
-
-### I3: 哪些特征/历史数据通常最有信号
-
-**观察**：
-- **用户侧（长期）**：过去是否打赏、打赏频率、金额分位数（重尾里特别重要）、最近一次打赏时间（recency）、对哪些内容/主播类型更容易打赏（偏好）
-- **会话侧（实时上下文）**：进房时长、互动行为（点赞/评论/关注/停留曲线）、主播热度、当前氛围（在线人数、礼物雨/活动）、时间段、节假日、活动
-
-**解释**：现实里往往是：没有实时上下文只靠静态画像 → 上限很低；加上会话行为 → 效果明显变好。
-
-**决策影响**：必须同时建模长期画像和实时上下文。
-
-### I4: 把不确定性变成策略
-
-**观察**：模型输出概率=不确定性本身。很多样本就是接近底噪（接近全局低打赏率）。
-
-**解释**：接受不可预测性，模型"很不确定"时就别激进分配；模型"很确定"时才集中资源。
-
-**决策影响**：不确定性可以作为策略信号，而非噪声。
-
-### I5: 离线评估：Revenue Capture@K 是关键指标
-
-**观察**：你要的不是"预测准"，而是**把钱集中在更少的曝光里**。
-
-**解释**：
-- **Capture@K%**：Top K% 曝光捕获的收入占比
-- **Lift@K%**：相对随机提升（Capture(K%) / K%）
-
-**决策影响**：MVP 验收标准："Top 1% 曝光捕获 20% 收入（Lift=20x）"，或"Top 5% 捕获 45% 收入（Lift=9x）"。
-
-### I6: 时间窗纪律：避免数据泄漏
-
-**观察**：任何特征都必须是 **impression 时刻之前**可得。
-
-**解释**：
-- ✅ 用户历史累计到 t-ε
-- ✅ 主播历史累计到 t-ε
-- ❌ 使用跨同一窗口直接统计到未来的特征（极易泄漏）
-- ❌ 会话结束后才知道的信息（例如最终停留时长、最终总互动）
-
-**决策影响**：必须严格按时间切分数据，并做泄漏检查。
-
-### I7: 数据切分：时间切分优先
-
-**观察**：必须按时间切分（否则未来信息泄漏很常见）。
-
-**解释**：
-- Train：前 70% 天
-- Valid：中间 15% 天
-- Test：最后 15% 天
-
-**决策影响**：再加一个"冷启动切分"（新用户/新主播测试集）可提升泛化评估。
-
-### I8: Baseline 三层级：保证能对齐"是否有用"
-
-**观察**：
-- **B0（最朴素）**：`score(room) = 历史平均打赏金额`（或历史 EV）或 `score = 热度(popularity)`
-- **B1（弱个性化）**：`score = user_spend_level * room_ev_level`
-- **B2（ML baseline）**：LightGBM / LR，Two-stage 或 Direct 回归
-
-**解释**：Two-stage：`P(gift>0) * E(amount | gift)`；Direct：直接回归 `log1p(amount)`
-
-**决策影响**：MVP 主力是 B2，但必须同时跑 B0/B1 作为对照。
-
-### I9: 上线 A/B 设计：最小可行
-
-**观察**：
-- **随机化单位**：user_id（推荐/排序最常用）
-- **主指标**：Revenue per DAU / Revenue per impression、Payer conversion、ARPPU/ARPU
-- **护栏指标**：用户留存、会话时长、投诉/负反馈、主播曝光集中度（Gini）、活跃主播覆盖、长尾主播收入变化
-
-**解释**：MVP 的 treat 先只改一件事：推荐候选不变，只改排序（rerank by EV），或只在 Top-N 里替换 1-2 个位置（降低风险）。
-
-**决策影响**：逐步放量（1% → 5% → 20% → 50%），护栏不过线（留存/生态指标不恶化）。
-
-### I10: MVP 一句话验收标准
-
-**观察**：
-- **离线**：Top 1% / 5% 的 **Capture** 相对 B0 有显著提升，并且在"时间切 test"+"去掉可疑特征"后仍成立
-- **在线**：`Revenue per DAU` 或 `Revenue per impression` 正向，护栏不过线（留存/生态指标不恶化）
-
-**解释**：如果模型能把"Top 1% / Top 5% 的 EV 捕获"显著提高，即使整体准确率一般，也通常是有业务价值的。因为打赏就是重尾：价值集中在头部。
-
-**决策影响**：不纠结模型细节，关注业务价值。
-
-> 只收录"会改变决策"的洞见，建议 5–8 条。
-
-| # | 洞见（标题） | 观察（What） | 解释（Why） | 决策影响（So what） | 证据 |
+| **M1** | **排序/分配 > 逐条预测** | 不需要"预测准每一条" | 把更可能产生价值的放到更好位置即可 | 评估用 RevCap@K，不用 MAE/RMSE |
+| **M2** | **RevCap@K 是关键指标** | Top K% 曝光捕获的收入占比 | 打赏是重尾分布，价值集中在头部 | MVP 标准：Top 1% 捕获 >50% 收入 |
+| **M3** | **时间窗纪律** | 任何特征必须是 t_click 之前可得 | ❌ 会话结束后才知道的信息（最终停留时长等） | 严格按时间切分 + 泄漏检查 |
+| **M4** | **历史打赏是最强信号** | pair-level 历史 > user/streamer 全局 | 同一用户对不同主播打赏概率差很多 | 重点挖掘 pair 特征 |
+| **M5** | **无常 ≠ 不能建模** | 单次打赏难预测，但条件概率稳定 | 规模上有系统性差异：有人"几乎不打赏"，有人"稳定高消费" | 模型学到系统性差异即有价值 |
+| **M6** | **业界惯例：收入用 raw，参与用 log** | 电商 GMV 用 raw bid，视频推荐用 log watch_time | 业务目标决定目标变换：收入最大化 → raw；用户覆盖 → log | 打赏场景 = 收入场景 → raw Y |
+| **M7** | **watch_live_time 是 post-treatment** | 包含打赏后的停留时间 | 本质是结果/中介变量，click 时刻不可得 | 当前 session 的 watch_time **必须删除** |
+| **M8** | **可用替代：历史观看先验** | user/pair/streamer 历史平均观看时长 | 这些是 pre-treatment，满足 `< click_ts` 即可用 | 用历史先验代替当前 session |
+| **M9** | **Partial dwell 是合理二阶段信号** | 进入后 5s/10s 的停留/互动 | 互动→打赏 的因果链路更合理 | 若允许延迟打分，可作为重排序特征 |
+| **M10** | **Train 内部也需要时间一致性** | 用"整窗聚合 + last_ts 挡"会制造分布偏移 | 对 train 早期样本：pair 统计被清零，与 val/test 机制不一致 | Train 也要 rolling 或 day-snapshot |
+| **M11** | **Two-Stage 不是完全没用** | Two-Stage 在 NDCG@100 可能更好 | 高稀疏下 Stage2 样本少误差大，但对"金主内部排序"可能有效 | RevCap 用 Direct，精细排序可试 Two-Stage |
+
+### 5.2 本项目验证的洞见
+
+| # | 洞见 | 观察 | 解释 | 决策影响 | 证据 |
 |---|---|---|---|---|---|
-| **I0** | **⚠️ 数据泄漏导致 Baseline 无效** | `pair_gift_mean` 重要性=328,571，Spearman=0.891 | 特征直接等于答案（pair_gift_count=1 时） | **必须用 past-only 特征重跑** | exp_baseline（重要性异常） |
-| **I0a** | **任务定义不匹配** | gift-only 学的是 E[gift|已送礼]，不是 EV | 模型看不到"谁不会送礼" | **改为 click-level（含 0）** | 任务定义分析 |
-| **I0b** | **评估指标偏差** | Top-K% Capture 是集合重叠，不关心金额 | 漏掉大额 vs 漏掉小额，业务影响完全不同 | **改用 Revenue Capture@K** | 指标定义分析 |
-| **I0c** | **标签窗口设计问题** | 固定 1h vs watch_time 截断差异 16.51%，<5s 分桶差异 65.57% | 用户观看时长中位数仅 4s，固定窗口引入伪标签 | **必须使用 watch_time 截断或更短 H** | MVP-1.6（标签窗口审计） |
-| **I0d** | **apply_frozen_features 性能优化** | iterrows() 对 490 万条记录需数小时 | Python 逐行处理开销巨大 | **使用 merge 代替 iterrows()，速度提升 107x** | MVP-1.6（性能优化） |
-| I1 | Direct vs Two-Stage（⚠️ 需复验） | Direct Top-1%=54.5% vs Two-Stage=35.7% | 可能有泄漏，结论不稳定 | 需在无泄漏版本复验 | exp_fair_comparison |
-| I2 | Two-Stage 精排有潜力 | Stage2 在 gift 子集 Spearman=0.89 | Stage2 在正样本内排序准 | 若复验通过可用于精排 | exp_two_stage_diagnosis |
-| I3 | 多任务学习无收益 | PR-AUC 反降 1.76pp | 密集信号对稀疏打赏迁移效果不显著 | 保留单任务方案 | exp_multitask |
-| I4 | 时间切分 + Past-only 是必须的 | 所有实验必须按时间切分 | 避免未来信息泄漏 | **特征必须是 t < t_impression** | exp_baseline |
-| **I5** | **KuaiLive 数据适合研究"金主分配"** | 23,400 用户是多行为活跃子集 | 样本选择偏差 | 重新表述问题为"活跃用户子集的金主分配"，不外推全站 | 数据分析 |
-| **I6** | **🔴 冷启动是致命瓶颈** | 61.5% 的 test 是冷启动 pair，RevCap@1%=3.2%（仅为基线 16%） | 模型完全依赖历史交互特征，无法预测新 pair | **必须设计冷启动 fallback（popularity/协同过滤）或探索内容特征** | MVP-1.4（切片评估） |
-| **I7** | **🔴 回归预测严重低估** | 预测均值 0.0008 vs 实际 1.22，低估 1500x | 98.5% 稀疏性导致模型趋向预测 0 | **需要 Two-Stage（P×E）或校准层，不能直接用回归输出做期望收益** | MVP-1.5（校准评估） |
-| **I8** | **✅ 实时特征（watch_time）是最强信号** | baseline+rt Top-1%=19.8%（+9.6%），特征重要性排名第一 | 用户当前观看时长比历史统计更能预测打赏 | **优先实时信号，将 watch_time 作为核心特征** | MVP-1.2（特征工程 V2） |
-| **I9** | **❌ 内容匹配假设失效** | baseline+content Top-1%=9.2%（-1.0%） | 用户打赏与内容类目偏好关系不大，可能依赖主播魅力 | **放弃内容匹配特征，不再投入** | MVP-1.2（特征工程 V2） |
-| **I10** | **⚠️ 更多特征不等于更好** | all=16.7% < baseline+rt=19.8%，但 Spearman 0.4059 > 0.4051 | 特征组合可能引入噪声，降低 Top-K 性能 | **特征选择比特征数量重要** | MVP-1.2（特征工程 V2） |
+| **E1** | **Raw Y >> Log Y** | RevCap +39.6% | Log 压缩 whale 信号（10元 vs 1000元差距变小） | 用 raw Y | exp_raw_vs_log |
+| **E2** | **RevCap ≠ Spearman** | 负相关 | 整体排序 vs 头部精准是不同目标 | 用 RevCap 评估 | exp_raw_vs_log |
+| **E3** | **Direct > Two-Stage** | 52.68% vs 45.66% | Two-Stage 引入额外误差 | 用 Direct | exp_raw_vs_log |
+| **E4** | **Pair 历史最强** | 系数 0.194 | 历史打赏行为是最强预测信号 | 重点挖掘 pair 特征 | exp_baseline |
+| **E5** | **Day-Frozen 无泄漏** | 200/200 通过 | merge_asof + allow_exact_matches=False | 可信实验基础 | exp_baseline |
+| **E6** | **阈值越高 RevCap 越高** | P90 > P80 > ... > P50 | 专注"超级大哥"比覆盖全体 gifters 更有效 | raw Y 隐式实现 | exp_three_stage |
+
 ---
-## 5) 决策空白（Decision Gaps）
-> 写"要回答什么"，不写"怎么做实验"。建议 3–6 条。
 
-| DG | 我们缺的答案 | 为什么重要（会改哪个决策） | 什么结果能关闭它 | 决策规则 |
+## 6) 决策空白（Decision Gaps）
+
+| DG | 我们缺的答案 | 为什么重要 | 什么结果能关闭它 | 决策规则 |
 |---|---|---|---|---|
-| **DG0** | **Past-only 特征能否消除泄漏且保持性能？** | 决定特征体系是否可信，是所有后续实验的前提 | Top-1% > 40% 且 Spearman 下降 < 0.2 | If 通过 → 特征可信，进入 DG1；Else → 重新设计特征 |
-| **DG0a** | **Click-level EV 预测的 Revenue Capture@K 如何？** | 决定任务定义是否正确 | Revenue Capture@1% > 50% | If 通过 → 任务定义正确；Else → 检查数据构造 |
-| DG1 | Direct vs Two-Stage 在无泄漏版本上的相对差距？ | 决定模型架构选择 | Direct 仍领先 > 10pp | If 是 → 结论稳定，Direct 为主；Else → 重新评估 |
-| DG2 | 召回-精排分工策略是否有效？ | 决定是否采用混合架构 | 分工策略 Top-1% > Direct 单独 | If 是 → 采用分工；Else → 继续优化 Direct |
-| DG3 | 实时上下文特征对 EV 预测的提升有多大？ | 决定是否投入实时特征工程 | Top-1% Capture 提升 > 5pp | If 是 → 上线实时特征；Else → 聚焦长期画像 |
-| **DG4** | **如何建模主播生态健康（外部性/约束）？** | 决定是否需要从纯 EV 扩展到多目标 | 定义可量化的生态健康指标 | If 有 → 加入约束；Else → 纯 EV 优化 |
-| **DG5** | **模拟器能否填补数据不足（长期留存/因果 uplift）？** | 决定是否需要构建模拟器 | 模拟器统计量与 KuaiLive 矩匹配 | If 是 → 用模拟器做策略评估；Else → 仅用离线数据 |
+| DG1 | LightGBM 是否优于 Linear？ | Linear 可能已到瓶颈 | RevCap 对比 | If >55% → 用 LightGBM；Else → 转特征工程 |
+| DG2 | Whale-specific 特征有用吗？ | 可能进一步区分大哥 | RevCap 提升 | If >2% 提升 → 加入；Else → 不加 |
+| **DG3** | **Frozen vs Rolling 哪个对齐线上？** | 决定评估协议 | 明确线上特征更新频率 | 批处理→Frozen；实时计数器→Rolling |
+| DG4 | Partial dwell (5s/10s) 值得做吗？ | 若允许延迟打分，可作为重排序特征 | 工程可行性 + RevCap 增益 | 需要产品侧确认是否允许延迟打分 |
+
+### 6.1 Protocol Trade-off（Frozen vs Rolling）
+
+| Protocol | 定义 | 优点 | 缺点 | 适用场景 |
+|---|---|---|---|---|
+| **A. Frozen-Serving** | Train 结束时 freeze 统计；Val/Test 只查这份表 | 简单、低成本、可上线 | 同天内信息完全冻结，信号损失 | 离线批处理特征 |
+| **B. Online-Rolling** | Val/Test 允许用"到该 click 为止的全部历史" | 更精确、理论上界 | 需要实时计数器，工程复杂 | 有流式特征基础设施 |
+
+> **建议**：两套协议都跑并汇报，既评估模型效果，也评估"实时特征的工程投入是否值得"
+
 ---
-## 6) 设计原则（可复用规则）
 
-### 6.1 已确认原则
+## 7) 设计原则
 
-| # | 原则 | 建议（做/不做） | 适用范围 | 证据 |
+### 7.1 已确认原则
+
+| # | 原则 | 建议 | 适用范围 | 证据 |
 |---|---|---|---|---|
-| **P0** | **⚠️ Past-only 特征是必须的** | ✅ 做：所有聚合特征必须只用 t < t_impression 的历史 | **所有实验** | I0（泄漏分析） |
-| **P0a** | **⚠️ 样本单元必须是 Click-level（含 0）** | ✅ 做：从 gift-only 改为 click + gift join | **所有实验** | I0a（任务定义） |
-| **P0b** | **⚠️ 主指标必须是 Revenue Capture@K** | ✅ 做：用收入占比，不用集合重叠 | **所有实验** | I0b（指标定义） |
-| **P0c** | **⚠️ 标签窗口必须考虑观看时长** | ✅ 做：使用 watch_time 截断或更短 H（10min/30min） | **所有实验** | I0c（标签窗口审计） |
-| **P0d** | **⚠️ apply_frozen_features 必须使用优化版本** | ✅ 做：使用 merge 代替 iterrows()，大数据集必须优化 | **所有实验** | I0d（性能优化） |
-| P1 | **时间切分是必须的** | ✅ 做：严格按时间切分（前 70% / 中间 15% / 最后 15% 天） | 所有实验设计 | exp_baseline |
-| P2 | ~~Direct Regression 做召回，Two-Stage 做精排~~ | ⚠️ 需复验 | 生产环境架构设计 | 需在无泄漏版本复验 |
-| P3 | **简单架构优先** | ✅ 做：LightGBM + log(1+Y) | 模型选择 | exp_baseline, exp_delay_modeling |
-| P4 | **多任务学习无收益** | ❌ 不做：保留单任务方案 | 模型选择 | exp_multitask |
-| **P5** | **重新表述问题边界** | ✅ 做：问题是"活跃用户子集的金主分配"，不是"全站转化/留存" | 研究定位 | I5（数据分析） |
+| P1 | **用 raw Y，不用 log(1+Y)** | 预测目标 = raw gift_price | 收入最大化场景 | exp_raw_vs_log |
+| P2 | **用 RevCap，不用 Spearman** | RevCap@1% 作为主指标 | 高价值用户识别 | exp_raw_vs_log |
+| P3 | **用 Day-Frozen 特征** | `day < current_day` 的历史 | 无泄漏保证 | exp_baseline |
+| P4 | **禁止当前 session 的 watch_live_time** | Post-treatment 泄漏特征 | 所有实验 | data_utils.py |
+| P5 | **使用 data_utils.py** | 统一数据处理入口 | 所有实验 | - |
+| **P6** | **Train/Val/Test 机制必须一致** | 若 Frozen 则全 Frozen；若 Rolling 则全 Rolling | 避免分布偏移 | expert review |
+| **P7** | **Category 编码：Train 拟合，全局复用** | 用 train 的 categories 映射 val/test；未知归为 unknown | 可复现性 | expert review |
 
-### 6.2 特征工程原则（无泄漏版）
+### 7.2 待验证原则
 
-| # | 特征类型 | 正确做法 ✅ | 错误做法 ❌ |
+| # | 原则 | 初步建议 | 需要验证 |
 |---|---|---|---|
-| F1 | 用户-主播交互 | `pair_gift_sum_past(t)` = cumsum 到 t-ε，shift(1) | `pair_gift_sum` = 全量 groupby 后回填 |
-| F2 | 用户侧统计 | `user_total_gift_7d_past(t)` = 只用 t 之前 7 天 | `user_total_gift` = 全量统计 |
-| F3 | 主播侧统计 | `streamer_recent_revenue_past(t)` = 只用 t 之前 | `streamer_total_revenue` = 全量统计 |
-| F4 | 实现方式 | **冻结版**：只用 train window 统计；**滚动版**：cumsum + shift(1) | groupby 后 merge 回原表（会包含未来） |
+| P8 | LightGBM 优于 Linear | 非线性捕获能力 | Gate-2 |
+| P9 | Rolling 优于 Frozen（若线上有实时特征） | 更精确的历史 | DG3 决策后 |
+| P10 | Multi-task (EV + is_gift) | 用密集信号扶起稀疏打赏 | 后续迭代 |
 
-### 6.3 待验证原则
-
-| # | 原则 | 初步建议 | 需要验证（MVP/Gate） |
-|---|---|---|---|
-| P6 | Direct vs Two-Stage 在无泄漏版本上的相对差距 | 🟡 假设 Direct 仍占优 | MVP-1.0 (Gate-0) |
-| P7 | 实时上下文特征显著提升 EV 预测 | 🟡 假设成立 | Gate-2 (实时特征实验) |
-| P8 | 模拟器能填补数据不足 | 🟡 假设成立 | MVP-2.0 (模拟器) |
-### 6.4 关键数字速查（只留会反复用到的）
-
-| 指标 | 值 | 条件 | 来源 | 状态 |
-|---|---|---|---|---|
-| ~~Baseline Top-1% Capture~~ | ~~56.2%~~ | ~~Direct Regression, gift-only~~ | ~~exp_baseline~~ | ❌ 泄漏无效 |
-| Direct Top-1% Capture | 54.5% | Direct Regression, click全量 | exp_fair_comparison | ⚠️ 需复验 |
-| Two-Stage Top-1% Capture | 35.7% | Two-Stage, click全量 | exp_fair_comparison | ⚠️ 需复验 |
-| Two-Stage Stage2 Spearman | 0.89 | Stage2 在 gift 子集 | exp_two_stage_diagnosis | ⚠️ 需复验 |
-| Oracle p 上界 | 90.7% | 真实 p(x) 替换 | exp_two_stage_diagnosis | ✅ 可信 |
-| OPE 最佳方法 | SNIPS | 相对误差 < 10% | exp_ope_validation | ✅ 可信 |
-| **无泄漏 Baseline (LightGBM)** | **Top-1%=11.6%, RevCap@1%=21.6%** | **Past-only, click-level, frozen** | **MVP-1.0** | ❌ 性能不达标 |
-| **估计层审计 (Ridge)** | **RevCap@1%=25.9%, Spearman=0.034** | **Past-only, click-level, frozen, Set-1** | **MVP-1.6** | ✅ 完成 |
-| **标签窗口差异** | **16.51%** | **固定 1h vs watch_time 截断** | **MVP-1.6** | 🔴 显著差异 |
-| **Watch time p50** | **4.0s** | **Train/Val/Test 中位数** | **MVP-1.6** | ✅ 验证用户观察 |
-| **KuaiLive 稀疏率** | **~1.50%** | **per-click gift rate** | **MVP-1.6** | ✅ 确认 |
-| **金额分布** | **P50=0, P99=1.0** | **重尾分布（98.5% 稀疏）** | **MVP-1.6** | ✅ 确认 |
-| **冷启动 pair 占比** | **61.5%** | **test 中无 train 历史的 pair** | **MVP-1.4** | 🔴 致命瓶颈 |
-| **冷启动 pair RevCap@1%** | **3.2%** | **仅为基线 16%** | **MVP-1.4** | 🔴 几乎随机 |
-| **热启动 pair RevCap@1%** | **31.1%** | **基线的 149%** | **MVP-1.4** | ✅ 尚可 |
-| **分类 ECE** | **0.0000** | **empirical 校准后** | **MVP-1.5** | ✅ 校准良好 |
-| **回归 ECE** | **1.22** | **预测 vs 实际差异** | **MVP-1.5** | 🔴 严重低估 |
-| **回归低估比例** | **~1500x** | **pred=0.0008 vs actual=1.22** | **MVP-1.5** | 🔴 不可直接用 |
-| **MVP-1.2 Best Top-1%** | **19.8%** | **baseline+rt（实时特征）** | **MVP-1.2** | ✅ +94% vs baseline |
-| **MVP-1.2 Best Spearman** | **0.4059** | **all（全特征）** | **MVP-1.2** | ✅ > 0.3 达标 |
-| **MVP-1.2 序列特征贡献** | **+6.7% Top-1%** | **baseline+seq vs baseline** | **MVP-1.2** | ✅ 有效 |
-| **MVP-1.2 实时特征贡献** | **+9.6% Top-1%** | **baseline+rt vs baseline** | **MVP-1.2** | ✅ 最强 |
-| **MVP-1.2 内容特征贡献** | **-1.0% Top-1%** | **baseline+content vs baseline** | **MVP-1.2** | ❌ 无效 |
-| **MVP-1.2 冷启动特征贡献** | **+8.5% Top-1%** | **baseline+cold vs baseline** | **MVP-1.2** | ✅ 有效 |
-
-### 6.5 已关闭方向（避免重复踩坑）
+### 7.3 已关闭方向
 
 | 方向 | 否定证据 | 关闭原因 | 教训 |
 |---|---|---|---|
-| ~~gift-only 任务定义~~ | 任务分析：学的是 E[gift\|已送礼]，不是 EV | 模型无法学到"谁不会送礼" | **必须用 click-level（含 0）** |
-| ~~全量聚合特征~~ | 泄漏分析：pair_gift_mean 重要性异常 | 特征=答案（pair_gift_count=1 时） | **必须用 past-only 特征** |
-| ~~Top-K% Capture 指标~~ | 指标分析：集合重叠不关心金额差异 | 漏掉大额 vs 漏掉小额，业务影响不同 | **改用 Revenue Capture@K** |
-| ~~固定标签窗口（不考虑观看时长）~~ | MVP-1.6：固定 1h vs 截断差异 16.51% | 用户观看时长中位数仅 4s，固定窗口引入伪标签 | **必须使用 watch_time 截断或更短 H** |
-| ~~apply_frozen_features 原始版本（iterrows）~~ | MVP-1.6：性能测试，100K 样本需 7.29s | Python 逐行处理开销巨大 | **使用优化版本（merge），速度提升 107x** |
-| ~~Two-Stage 全量排序~~ | exp_fair_comparison: Top-1%=35.7% vs Direct=54.5% | Stage1 分类能力不足（⚠️ 需复验） | 仅用于精排场景 |
-| ~~多任务学习~~ | exp_multitask: PR-AUC 反降 1.76pp | 密集信号对稀疏打赏迁移效果不显著 | 保留单任务方案 |
-| ~~复杂延迟校正~~ | exp_delay_modeling: Baseline ECE=0.018 优于 Chapelle=0.028 | 简单架构已足够 | 保持简单架构 |
-| ~~外推到全站~~ | 数据分析：23,400 用户是活跃子集 | 样本选择偏差 | **只研究"活跃用户子集的金主分配"** |
+| ~~Two-Stage for RevCap~~ | RevCap 45.66% < Direct 52.68% | Stage2 样本少误差大，乘 p(x) 放大噪声 | RevCap 用 Direct；精细排序可保留 Two-Stage |
+| ~~Three-Stage Whale-only~~ | RevCap 43.60% < Direct 52.68% | 不如 Direct raw Y | raw Y 已隐式学会找 whale |
+| ~~Log(1+Y) 目标~~ | RevCap -39.6% | 压缩 whale 信号（10元 vs 1000元差距变小） | 收入场景用 raw Y |
+| ~~当前 session watch_live_time~~ | Post-treatment | 包含打赏后停留时间，click 时刻不可得 | 用历史观看先验替代 |
+
+### 7.4 ✅ 已验证问题（2026-01-18）
+
+Expert Review 识别的 4 个潜在问题，经代码分析和验证：
+
+| 问题 | 状态 | 说明 |
+|---|---|---|
+| Train 内部 pair 统计被清零 | ✅ 不存在 | Day-Frozen 使用 `merge_asof(allow_exact_matches=False)`，无 last_ts 清零逻辑 |
+| User/Streamer 全局聚合泄漏 | ✅ 不存在 | 三级特征都用 cumsum + merge_asof，严格 `day < click_day` |
+| pair_last_gift_gap 可能为负 | ✅ 不适用 | 当前实现无 last_gift_gap 特征 |
+| Category 编码各 split 独立 | ✅ **已修复** | Train 拟合 categories，Val/Test 复用映射，OOV→'unknown' |
+
+**验证结果**：200/200 samples 通过无泄漏验证
+
 ---
-## 7) 指针（详细信息在哪）
+
+## 8) 指针
+
 | 类型 | 路径 | 说明 |
 |---|---|---|
-| 🗺️ Roadmap | `./gift_EVpred_roadmap.md` | Decision Gates + MVP 执行 |
-| 📋 Kanban | `status/kanban.md` | 进度中控 |
-| 📗 Experiments | `exp/exp_*.md` | 单实验报告 |
-| 📊 Consolidated | `gift_EVpred_consolidated_*.md` | 跨实验综合 |
+| 🗺️ Roadmap | `gift_EVpred_roadmap.md` | Decision Gates + MVP 执行 |
+| 📄 Data Utils | `data_utils.py` | 统一数据处理入口 |
+| 📗 Baseline | `exp/exp_baseline_day_frozen_20260118.md` | Day-Frozen 基线 |
+| 📗 Three-Stage | `exp/exp_three_stage_20260118.md` | Whale-only 实验 |
+| 📗 Raw vs Log | `exp/exp_raw_vs_log_20260118.md` | 当前最优方案 |
+| 📊 Results | `results/` | 数值结果 JSON |
+| 🗃️ Archive | `exp/archive_leaky/` | 有泄漏的旧实验 |
+
 ---
-## 8) 变更日志（只记录"知识改变"）
+
+## 9) 变更日志
 
 | 日期 | 变更 | 影响 |
 |---|---|---|
-| 2026-01-18 | 创建 | - |
-| 2026-01-18 | 添加数据泄漏相关假设（Q1.1a, Q1.1b, Q2.1a） | 基于 baseline 分析，发现泄漏和任务不匹配问题，需复验结论 |
-| **2026-01-18** | **重大更新：发现 Baseline 三个致命问题** | **所有现有结论需复验** |
-| | **P1 数据泄漏**：`pair_gift_mean/sum` 是泄漏特征 | Baseline 56.2%/0.891 无效 |
-| | **P2 任务不匹配**：gift-only ≠ EV | 必须改为 click-level（含 0） |
-| | **P3 评估偏差**：Top-K% Capture ≠ Revenue Capture@K | 必须用收入占比指标 |
-| | **P4 样本偏差**：KuaiLive 是活跃用户子集 | 重新表述问题边界 |
-| | 新增 Q0 基础设施正确性分支 | 最高优先级 |
-| | 新增 Q4 长期全局目标分支 | 分配优化、模拟器 |
-| | 新增 DG0/DG4/DG5 决策空白 | 无泄漏验证、生态健康、模拟器 |
-| | 新增 P0/P0a/P0b/F1-F4 设计原则 | 特征工程规范 |
-| | 废弃 gift-only、全量聚合、Top-K% Capture | 关闭方向更新 |
-| **2026-01-18** | **新增三个实验计划（MVP-1.1/1.2/1.3）** | **探索无泄漏版本优化方向** |
-| | MVP-1.1: Rolling Leakage Diagnosis | 诊断 cumsum+shift 实现问题 |
-| | MVP-1.2: Feature Engineering V2 | 探索序列/实时/内容特征 |
-| | MVP-1.3: Binary Classification | 任务降级验证 P(gift>0) |
-| | 新增假设 Q1.5/Q1.6/Q1.7 和 H1.1-H3.4 | 假设树更新 |
-| **2026-01-18** | **新增评估类实验计划（MVP-1.4/1.5）** | **补全 §2.5 评估体系** |
-| | MVP-1.4: Slice Evaluation | 切片评估（冷启动/头部/长尾） |
-| | MVP-1.5: Calibration Evaluation | 校准评估（ECE/reliability curve） |
-| | 新增假设 H4.1-H4.3（校准）和 H5.1-H5.4（切片） | Q2.2/Q2.3 细化 |
-| **2026-01-18** | **新增估计层审计实验（MVP-1.6）** | **系统性审计问题定义和 IO 口径** |
-| | MVP-1.6: Estimation Layer Audit | 审计预测目标+IO口径+时间切分+标签窗口+特征泄漏 |
-| | 新增假设 Q0.5 和 H6.1-H6.6 | Q0 基础设施正确性细化 |
-| **2026-01-18** | **MVP-1.6 完成** | **审计通过，发现标签窗口问题** |
-| | Q0.5 假设验证：H6.1-H6.6 全部通过 | 预测目标清晰、IO口径正确、时间切分可审计 |
-| | 发现标签窗口差异显著（16.51%） | 建议使用 watch_time 截断或更短 H（10min/30min） |
-| | Set-1 RevCap@1%=25.9%，Spearman=0.034 | 当前定义可服务在线分配 |
-| | apply_frozen_features 优化（107x 加速） | 使用 merge 代替 iterrows()，实现 lookup 缓存 |
-| | 新增洞见 I0c（标签窗口）和 I0d（性能优化） | 洞见汇合更新 |
-| | 新增设计原则 P0c（标签窗口）和 P0d（性能优化） | 设计原则更新 |
-| | 更新关键数字：估计层审计结果、标签窗口差异、watch time p50 | 关键数字速查更新 |
-| **2026-01-18** | **MVP-1.4/1.5 完成** | **切片评估 + 校准评估** |
-| | MVP-1.4 (Slice Evaluation)：冷启动 pair RevCap@1%=3.2%（仅为基线 16%） | 冷启动是致命瓶颈，61.5% 的 test 是冷启动 |
-| | MVP-1.5 (Calibration)：回归 ECE=1.22，低估 1500x | 分类 ECE=0（empirical），回归需校准层 |
-| | 新增洞见 I6（冷启动瓶颈）和 I7（回归低估） | 洞见汇合更新 |
-| | 更新关键数字：冷启动占比、校准指标 | 关键数字速查更新 |
-| | Q2.2/Q2.3 假设全部验证完成 | 假设树更新 |
-| **2026-01-18** | **MVP-1.2 完成：特征工程 V2** | **新特征信号源探索** |
-| | 假设验证：H2.1 序列 ✅（+6.7%）, H2.2 实时 ✅（+9.6%）, H2.3 内容 ❌（-1.0%）, H2.4 组合 ⚠️（不优于单组） | Q1.6 已回答 |
-| | **关键发现：watch_time 是最强信号（特征重要性排名第一）** | Best Top-1%=19.8%（baseline+rt） |
-| | **Spearman 达标 0.4059 > 0.3，但 Top-1% 未达 30% 目标** | 继续探索实时特征 |
-| | 新增洞见 I8（实时特征最强）、I9（内容匹配失效）、I10（特征选择重要） | 洞见汇合更新 |
-| | 更新关键数字：MVP-1.2 各配置性能 | 关键数字速查更新 |
-| **2026-01-18** | **MVP-1.3 完成：二分类验证** | **任务降级验证** |
-| | 假设验证：H3.1 ❌（AUC=0.61 < 0.70）, H3.2 ⚠️（相似难度）, H3.3 ✅（Prec@1%=19.24% > 5%）, H3.4 ⚠️（Two-Stage +4.3pp） | Q1.7 已回答 |
-| | **关键发现：二分类可用于召回，但 AUC 未达 0.70 目标** | Two-Stage 改进版 RevCap@1%=25.9% |
-| | 更新下一步计划：深化实时特征、冷启动策略、标签窗口优化 | 下一步计划更新 |
-<details>
-<summary><b>附录：术语表 / 背景（可选）</b></summary>
+| 2026-01-18 | 创建 Day-Frozen 无泄漏框架 | 可信实验基础 |
+| 2026-01-18 | Direct vs Two-Stage baseline | 初始 baseline |
+| 2026-01-18 | Three-Stage Whale-only 实验 | RevCap=43.60%，不如预期 |
+| 2026-01-18 | **Raw Y vs Log Y 实验** | **RevCap=52.68%（+39.6%），当前最优** |
+| 2026-01-18 | Expert Review 整合 | 新增 M7-M11 方法论洞见；明确 Frozen vs Rolling 协议 trade-off |
+| 2026-01-18 | **P0-Tech 验证通过** | 3 个问题不存在（Day-Frozen 设计正确），1 个已修复（Category 编码）；200/200 验证通过 |
 
-### 术语表
+---
+
+<details>
+<summary><b>附录：术语表</b></summary>
+
 | 术语 | 定义 |
 |---|---|
-| [...] | [...] |
-
-### 背景
-- [...]
+| EV | Expected Value，期望打赏金额 |
+| RevCap@K | Revenue Capture @K%，Top-K% 预测捕获的实际收入占比 |
+| Whale | 大额打赏用户（如 ≥100元） |
+| Day-Frozen | 历史特征只用 `day < current_day` 的数据 |
+| Rolling | 历史特征用 `gift_ts < click_ts` 的数据 |
 
 </details>

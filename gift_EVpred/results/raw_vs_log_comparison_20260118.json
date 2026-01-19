@@ -1,0 +1,37 @@
+{
+  "direct_raw": {
+    "rev_cap_1pct": 0.5267533412145732,
+    "spearman": 0.06658159984255987,
+    "gift_rate_1pct": 0.11103228095069173
+  },
+  "direct_log_exp": {
+    "rev_cap_1pct": 0.3772671888266482,
+    "spearman": 0.10611286047920417,
+    "gift_rate_1pct": 0.24051081943951755
+  },
+  "direct_log_rank": {
+    "rev_cap_1pct": 0.3772671888266482,
+    "spearman": 0.10603701162406946,
+    "gift_rate_1pct": 0.24051081943951755
+  },
+  "twostage_raw": {
+    "rev_cap_1pct": 0.4565643298647287,
+    "spearman": 0.010977512374712183,
+    "gift_rate_1pct": 0.11032280950691735
+  },
+  "twostage_log_exp": {
+    "rev_cap_1pct": 0.44891281366467634,
+    "spearman": 0.09049542204862727,
+    "gift_rate_1pct": 0.20319262149698475
+  },
+  "twostage_log_rank": {
+    "rev_cap_1pct": 0.32009224582404855,
+    "spearman": 0.09966798856521336,
+    "gift_rate_1pct": 0.2360411493437389
+  },
+  "clf_only": {
+    "rev_cap_1pct": 0.1523048808483485,
+    "spearman": 0.11424336886489912,
+    "gift_rate_1pct": 0.21347995743171339
+  }
+}

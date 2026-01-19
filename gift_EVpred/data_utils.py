@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """
-Gift EV Prediction - Leakage-Free Data Utilities
-=================================================
+Gift EV Prediction - Leakage-Free Data Utilities (Day-Frozen Version)
+======================================================================
 
 统一的无泄漏数据处理模块，所有 gift_EVpred 实验必须使用此模块。
+
+核心设计：按天冻结（Day-Frozen / Day-Snapshot）
+- 对每个 click 的特征，只允许用 **之前的天（day < 当前 day）**的历史
+- 完全不会用到"未来"，但会丢掉"同一天更早发生的历史"（保守但安全）
+- 训练/验证/测试都用同一套构造逻辑
 
 Usage:
     from gift_EVpred.data_utils import (
@@ -14,24 +19,20 @@ Usage:
     )
 
     # 标准用法
-    train_df, val_df, test_df, lookups = prepare_dataset()
+    train_df, val_df, test_df = prepare_dataset()
 
     # 获取特征列
     feature_cols = get_feature_columns(train_df)
 
-    # 验证无泄漏
-    verify_no_leakage(train_df, gift_df)
-
 Author: Viska Wei
 Date: 2026-01-18
-Version: 1.0
+Version: 2.0 (Day-Frozen)
 """
 
 import numpy as np
 import pandas as pd
 from pathlib import Path
 from datetime import datetime, timedelta
-import pickle
 import warnings
 
 warnings.filterwarnings('ignore')
@@ -42,8 +43,6 @@ warnings.filterwarnings('ignore')
 BASE_DIR = Path("/home/swei20/GiftLive")
 DATA_DIR = BASE_DIR / "data" / "KuaiLive"
 OUTPUT_DIR = BASE_DIR / "gift_EVpred"
-CACHE_DIR = OUTPUT_DIR / "features_cache"
-CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 # =============================================================================
 # 常量配置
@@ -62,7 +61,7 @@ FORBIDDEN_FEATURES = [
 EXCLUDE_COLUMNS = [
     'user_id', 'live_id', 'streamer_id', 'timestamp', 'timestamp_dt',
     'gift_price_label', 'target', 'target_raw', 'is_gift',
-    'label_end_dt', '_datetime', '_date',
+    'label_end_dt', '_datetime', '_date', 'day',
 ] + FORBIDDEN_FEATURES
 
 
@@ -221,270 +220,157 @@ def split_by_days(df, train_days=7, val_days=7, test_days=7, gap_days=0):
 
 
 # =============================================================================
-# Frozen 特征（无泄漏）
+# Day-Frozen 历史特征（无泄漏）
 # =============================================================================
-def create_frozen_lookups(gift, train_end_ts, click=None):
+def create_day_frozen_features(gift, click):
     """
-    创建 Frozen 版本的特征查找表
+    创建按天冻结的历史特征（Day-Frozen / Day-Snapshot）
 
-    只使用 Train 时间窗口内的数据计算统计量，Val/Test 只查表。
+    核心设计：
+    - 对每个 click 的特征，只允许用 **之前的天（day < 当前 day）**的历史
+    - 使用 pd.merge_asof(..., by=..., allow_exact_matches=False) 高效实现
+    - 训练/验证/测试都用同一套逻辑
+    - 无泄漏、口径一致
 
     Args:
         gift: 全量 gift DataFrame
-        train_end_ts: Train 结束时间戳（毫秒）
-        click: 全量 click DataFrame（可选，用于计算历史观看时长）
+        click: 全量 click DataFrame (已删除 watch_live_time)
 
     Returns:
-        dict: {'pair': {...}, 'user': {...}, 'streamer': {...}, 'watch_time': {...}}
+        DataFrame: click 数据 + 历史特征
     """
-    log("Creating frozen lookups (train window only)...")
+    log("Creating day-frozen historical features...")
 
-    # 只用 train 时间窗口内的 gifts
-    gift_train = gift[gift['timestamp'] <= train_end_ts].copy()
-    log(f"  Train gifts: {len(gift_train):,} (before {pd.to_datetime(train_end_ts, unit='ms')})")
+    click = click.copy()
+    gift = gift.copy()
 
-    lookups = {}
+    # 添加 day 列（转换为 datetime 以便 merge_asof）
+    click['day'] = pd.to_datetime(click['timestamp'], unit='ms').dt.normalize()
+    gift['day'] = pd.to_datetime(gift['timestamp'], unit='ms').dt.normalize()
 
-    # -------------------------------------------------------------------------
-    # Pair-level features (user, streamer)
-    # -------------------------------------------------------------------------
-    pair_stats = gift_train.groupby(['user_id', 'streamer_id']).agg({
-        'gift_price': ['count', 'sum', 'mean', 'std', 'max'],
-        'timestamp': 'max'  # 最后一次打赏时间
-    }).reset_index()
-    pair_stats.columns = ['user_id', 'streamer_id',
-                          'count', 'sum', 'mean', 'std', 'max', 'last_ts']
-    pair_stats['std'] = pair_stats['std'].fillna(0)
+    # =========================================================================
+    # Pair-level 历史特征 (user, streamer)
+    # =========================================================================
+    log("  Building pair-level features...")
 
-    lookups['pair'] = {}
-    for _, row in pair_stats.iterrows():
-        key = (row['user_id'], row['streamer_id'])
-        lookups['pair'][key] = {
-            'count': row['count'],
-            'sum': row['sum'],
-            'mean': row['mean'],
-            'std': row['std'],
-            'max': row['max'],
-            'last_ts': row['last_ts']
-        }
+    # 按天聚合
+    pair_day = gift.groupby(['day', 'user_id', 'streamer_id'])['gift_price'].agg(
+        gift_cnt_day='count',
+        gift_sum_day='sum'
+    ).reset_index()
 
-    # -------------------------------------------------------------------------
-    # User-level features
-    # -------------------------------------------------------------------------
-    user_stats = gift_train.groupby('user_id').agg({
-        'gift_price': ['count', 'sum', 'mean'],
-        'streamer_id': 'nunique'
-    }).reset_index()
-    user_stats.columns = ['user_id', 'count', 'sum', 'mean', 'unique_streamers']
+    # 按 day 全局排序 (merge_asof 要求 on 列全局排序)
+    pair_day = pair_day.sort_values('day').reset_index(drop=True)
 
-    lookups['user'] = {}
-    for _, row in user_stats.iterrows():
-        lookups['user'][row['user_id']] = {
-            'count': row['count'],
-            'sum': row['sum'],
-            'mean': row['mean'],
-            'unique_streamers': row['unique_streamers']
-        }
+    # Cumsum: 截至当天（含）的累计
+    pair_day[['pair_gift_cnt_hist', 'pair_gift_sum_hist']] = pair_day.groupby(
+        ['user_id', 'streamer_id']
+    )[['gift_cnt_day', 'gift_sum_day']].cumsum()
 
-    # -------------------------------------------------------------------------
-    # Streamer-level features
-    # -------------------------------------------------------------------------
-    str_stats = gift_train.groupby('streamer_id').agg({
-        'gift_price': ['count', 'sum', 'mean'],
-        'user_id': 'nunique'
-    }).reset_index()
-    str_stats.columns = ['streamer_id', 'count', 'sum', 'mean', 'unique_givers']
+    # 准备 click 数据用于 merge_asof (按 day 全局排序)
+    click_sorted = click.sort_values('day').reset_index(drop=True)
 
-    lookups['streamer'] = {}
-    for _, row in str_stats.iterrows():
-        lookups['streamer'][row['streamer_id']] = {
-            'count': row['count'],
-            'sum': row['sum'],
-            'mean': row['mean'],
-            'unique_givers': row['unique_givers']
-        }
-
-    # -------------------------------------------------------------------------
-    # Watch time features (历史观看时长，无泄漏)
-    # 注意：这里用的是 train 期间的 click 数据的 watch_live_time
-    # -------------------------------------------------------------------------
-    lookups['watch_time'] = {'user': {}, 'pair': {}, 'streamer': {}}
-
-    if click is not None and 'watch_live_time' in click.columns:
-        click_train = click[click['timestamp'] <= train_end_ts].copy()
-        log(f"  Train clicks for watch_time: {len(click_train):,}")
-
-        # User-level: 用户历史平均观看时长
-        user_watch = click_train.groupby('user_id')['watch_live_time'].agg(['mean', 'sum', 'count']).reset_index()
-        user_watch.columns = ['user_id', 'mean', 'sum', 'count']
-        for _, row in user_watch.iterrows():
-            lookups['watch_time']['user'][row['user_id']] = {
-                'mean': row['mean'],
-                'sum': row['sum'],
-                'count': row['count']
-            }
-
-        # Pair-level: user-streamer 历史平均观看时长
-        pair_watch = click_train.groupby(['user_id', 'streamer_id'])['watch_live_time'].agg(['mean', 'sum', 'count']).reset_index()
-        pair_watch.columns = ['user_id', 'streamer_id', 'mean', 'sum', 'count']
-        for _, row in pair_watch.iterrows():
-            key = (row['user_id'], row['streamer_id'])
-            lookups['watch_time']['pair'][key] = {
-                'mean': row['mean'],
-                'sum': row['sum'],
-                'count': row['count']
-            }
-
-        # Streamer-level: 主播历史平均被观看时长
-        str_watch = click_train.groupby('streamer_id')['watch_live_time'].agg(['mean', 'sum', 'count']).reset_index()
-        str_watch.columns = ['streamer_id', 'mean', 'sum', 'count']
-        for _, row in str_watch.iterrows():
-            lookups['watch_time']['streamer'][row['streamer_id']] = {
-                'mean': row['mean'],
-                'sum': row['sum'],
-                'count': row['count']
-            }
-
-        log(f"  Watch time lookups: {len(lookups['watch_time']['pair']):,} pairs, "
-            f"{len(lookups['watch_time']['user']):,} users", "SUCCESS")
-
-    log(f"  Lookups created: {len(lookups['pair']):,} pairs, "
-        f"{len(lookups['user']):,} users, {len(lookups['streamer']):,} streamers", "SUCCESS")
-
-    return lookups
-
-
-def apply_frozen_features(df, lookups, is_train=False):
-    """
-    应用 Frozen 特征到 DataFrame
-
-    对于 Val/Test：直接用 lookup 表（train 期间的统计）
-    对于 Train：需要检查 last_ts < click_ts，避免看到未来数据
-
-    Args:
-        df: DataFrame with user_id, streamer_id, timestamp columns
-        lookups: dict from create_frozen_lookups()
-        is_train: 是否是训练集（需要额外的 past-only 检查）
-
-    Returns:
-        DataFrame with past-only features added
-    """
-    log(f"Applying frozen features (is_train={is_train})...")
-
-    df = df.copy()
-    n = len(df)
-
-    # 创建 pair keys
-    pair_keys = list(zip(df['user_id'], df['streamer_id']))
-    timestamps = df['timestamp'].values
-
-    # -------------------------------------------------------------------------
-    # Pair features (带 _past 后缀，表示无泄漏)
-    # 对于 Train 集：需要检查 last_ts < click_ts
-    # -------------------------------------------------------------------------
-    pair_count = np.zeros(n)
-    pair_sum = np.zeros(n)
-    pair_mean = np.zeros(n)
-    pair_std = np.zeros(n)
-    pair_max = np.zeros(n)
-    pair_last_gap = np.full(n, 999.0)
-
-    for i, (key, click_ts) in enumerate(zip(pair_keys, timestamps)):
-        if key in lookups['pair']:
-            info = lookups['pair'][key]
-            last_ts = info.get('last_ts', np.nan)
-
-            # 关键检查：对于 Train 集，只有 last_ts < click_ts 才能使用
-            if is_train and not np.isnan(last_ts) and last_ts >= click_ts:
-                # 这个 gift 发生在 click 之后，不能使用
-                # 保持默认值 0
-                continue
-
-            pair_count[i] = info.get('count', 0)
-            pair_sum[i] = info.get('sum', 0.0)
-            pair_mean[i] = info.get('mean', 0.0)
-            pair_std[i] = info.get('std', 0.0)
-            pair_max[i] = info.get('max', 0.0)
-
-            if not np.isnan(last_ts) and last_ts < click_ts:
-                pair_last_gap[i] = (click_ts - last_ts) / (1000 * 3600)
-
-    df['pair_gift_count_past'] = pair_count
-    df['pair_gift_sum_past'] = pair_sum
-    df['pair_gift_mean_past'] = pair_mean
-    df['pair_gift_std_past'] = pair_std
-    df['pair_gift_max_past'] = pair_max
-    df['pair_last_gift_gap_hours'] = pair_last_gap
-
-    # -------------------------------------------------------------------------
-    # User features（简化：直接用 lookup，因为是全局统计）
-    # -------------------------------------------------------------------------
-    df['user_gift_count_past'] = df['user_id'].map(
-        lambda x: lookups['user'].get(x, {}).get('count', 0)
-    )
-    df['user_gift_sum_past'] = df['user_id'].map(
-        lambda x: lookups['user'].get(x, {}).get('sum', 0.0)
-    )
-    df['user_gift_mean_past'] = df['user_id'].map(
-        lambda x: lookups['user'].get(x, {}).get('mean', 0.0)
-    )
-    df['user_unique_streamers_past'] = df['user_id'].map(
-        lambda x: lookups['user'].get(x, {}).get('unique_streamers', 0)
+    # merge_asof with by: 按 (user, streamer) 分组，查找 strictly before 的最近记录
+    click_with_pair = pd.merge_asof(
+        click_sorted,
+        pair_day[['day', 'user_id', 'streamer_id', 'pair_gift_cnt_hist', 'pair_gift_sum_hist']],
+        on='day',
+        by=['user_id', 'streamer_id'],
+        direction='backward',
+        allow_exact_matches=False  # 严格 < 当前天
     )
 
-    # -------------------------------------------------------------------------
-    # Streamer features（简化：直接用 lookup）
-    # -------------------------------------------------------------------------
-    df['str_gift_count_past'] = df['streamer_id'].map(
-        lambda x: lookups['streamer'].get(x, {}).get('count', 0)
+    # 填充 NaN 为 0
+    click_with_pair[['pair_gift_cnt_hist', 'pair_gift_sum_hist']] = \
+        click_with_pair[['pair_gift_cnt_hist', 'pair_gift_sum_hist']].fillna(0)
+
+    # 计算均值
+    click_with_pair['pair_gift_mean_hist'] = (
+        click_with_pair['pair_gift_sum_hist'] / click_with_pair['pair_gift_cnt_hist'].replace(0, np.nan)
+    ).fillna(0)
+
+    log(f"    Pair features: {(click_with_pair['pair_gift_cnt_hist'] > 0).sum():,} samples have history")
+
+    # =========================================================================
+    # User-level 历史特征
+    # =========================================================================
+    log("  Building user-level features...")
+
+    user_day = gift.groupby(['day', 'user_id'])['gift_price'].agg(
+        gift_cnt_day='count',
+        gift_sum_day='sum'
+    ).reset_index()
+
+    # 按 day 全局排序
+    user_day = user_day.sort_values('day').reset_index(drop=True)
+    user_day[['user_gift_cnt_hist', 'user_gift_sum_hist']] = user_day.groupby('user_id')[
+        ['gift_cnt_day', 'gift_sum_day']
+    ].cumsum()
+
+    # merge_asof by user_id (click_with_pair 已按 day 排序)
+    click_with_user = pd.merge_asof(
+        click_with_pair,
+        user_day[['day', 'user_id', 'user_gift_cnt_hist', 'user_gift_sum_hist']],
+        on='day',
+        by='user_id',
+        direction='backward',
+        allow_exact_matches=False
     )
-    df['str_gift_sum_past'] = df['streamer_id'].map(
-        lambda x: lookups['streamer'].get(x, {}).get('sum', 0.0)
+
+    click_with_user[['user_gift_cnt_hist', 'user_gift_sum_hist']] = \
+        click_with_user[['user_gift_cnt_hist', 'user_gift_sum_hist']].fillna(0)
+    click_with_user['user_gift_mean_hist'] = (
+        click_with_user['user_gift_sum_hist'] / click_with_user['user_gift_cnt_hist'].replace(0, np.nan)
+    ).fillna(0)
+
+    log(f"    User features: {(click_with_user['user_gift_cnt_hist'] > 0).sum():,} samples have history")
+
+    # =========================================================================
+    # Streamer-level 历史特征
+    # =========================================================================
+    log("  Building streamer-level features...")
+
+    str_day = gift.groupby(['day', 'streamer_id'])['gift_price'].agg(
+        gift_cnt_day='count',
+        gift_sum_day='sum'
+    ).reset_index()
+
+    # 按 day 全局排序
+    str_day = str_day.sort_values('day').reset_index(drop=True)
+    str_day[['str_gift_cnt_hist', 'str_gift_sum_hist']] = str_day.groupby('streamer_id')[
+        ['gift_cnt_day', 'gift_sum_day']
+    ].cumsum()
+
+    # merge_asof by streamer_id (click_with_user 已按 day 排序)
+    click_with_str = pd.merge_asof(
+        click_with_user,
+        str_day[['day', 'streamer_id', 'str_gift_cnt_hist', 'str_gift_sum_hist']],
+        on='day',
+        by='streamer_id',
+        direction='backward',
+        allow_exact_matches=False
     )
-    df['str_gift_mean_past'] = df['streamer_id'].map(
-        lambda x: lookups['streamer'].get(x, {}).get('mean', 0.0)
-    )
-    df['str_unique_givers_past'] = df['streamer_id'].map(
-        lambda x: lookups['streamer'].get(x, {}).get('unique_givers', 0)
-    )
 
-    # -------------------------------------------------------------------------
-    # Watch time features (历史观看时长)
-    # -------------------------------------------------------------------------
-    if 'watch_time' in lookups and lookups['watch_time']['user']:
-        # User-level 历史观看时长
-        df['user_avg_watch_time_past'] = df['user_id'].map(
-            lambda x: lookups['watch_time']['user'].get(x, {}).get('mean', 0)
-        )
-        df['user_total_watch_time_past'] = df['user_id'].map(
-            lambda x: lookups['watch_time']['user'].get(x, {}).get('sum', 0)
-        )
+    click_with_str[['str_gift_cnt_hist', 'str_gift_sum_hist']] = \
+        click_with_str[['str_gift_cnt_hist', 'str_gift_sum_hist']].fillna(0)
+    click_with_str['str_gift_mean_hist'] = (
+        click_with_str['str_gift_sum_hist'] / click_with_str['str_gift_cnt_hist'].replace(0, np.nan)
+    ).fillna(0)
 
-        # Pair-level 历史观看时长
-        pair_watch_mean = np.zeros(n)
-        pair_watch_count = np.zeros(n)
-        for i, key in enumerate(pair_keys):
-            if key in lookups['watch_time']['pair']:
-                info = lookups['watch_time']['pair'][key]
-                # 对于 Train 集，需要检查是否有未来数据（但观看时长没有时间戳，简化处理）
-                pair_watch_mean[i] = info.get('mean', 0)
-                pair_watch_count[i] = info.get('count', 0)
+    log(f"    Streamer features: {(click_with_str['str_gift_cnt_hist'] > 0).sum():,} samples have history")
 
-        df['pair_avg_watch_time_past'] = pair_watch_mean
-        df['pair_watch_count_past'] = pair_watch_count
+    click = click_with_str
 
-        # Streamer-level 历史被观看时长
-        df['str_avg_watch_time_past'] = df['streamer_id'].map(
-            lambda x: lookups['watch_time']['streamer'].get(x, {}).get('mean', 0)
-        )
+    # =========================================================================
+    # 历史观看时长特征（可选，使用过去天的 click/watch_time）
+    # =========================================================================
+    # 注意：当前实现不使用 watch_time 特征，因为需要原始 click 保留 watch_live_time
+    # 如需添加，可以在此处实现类似的 cumsum + shift 逻辑
 
-        n_watch_features = 5
-    else:
-        n_watch_features = 0
+    log("Day-frozen features created!", "SUCCESS")
+    log(f"  Total historical features: 9 (pair: 3, user: 3, streamer: 3)")
 
-    log(f"  Applied {14 + n_watch_features} past-only features", "SUCCESS")
-
-    return df
+    return click
 
 
 # =============================================================================
@@ -562,6 +448,11 @@ def prepare_dataset(train_days=7, val_days=7, test_days=7, gap_days=0,
 
     这是所有 gift_EVpred 实验的标准入口。
 
+    核心设计：Day-Frozen（按天冻结）
+    - 对每个 click 的特征，只允许用 **之前的天（day < 当前 day）**的历史
+    - 训练/验证/测试都用同一套构造逻辑
+    - 无泄漏、口径一致
+
     Args:
         train_days: 训练集天数 (default: 7)
         val_days: 验证集天数 (default: 7)
@@ -571,70 +462,87 @@ def prepare_dataset(train_days=7, val_days=7, test_days=7, gap_days=0,
         use_cache: 是否使用缓存 (default: True)
 
     Returns:
-        tuple: (train_df, val_df, test_df, lookups)
+        tuple: (train_df, val_df, test_df)
 
     Example:
         >>> from gift_EVpred.data_utils import prepare_dataset, get_feature_columns
-        >>> train_df, val_df, test_df, lookups = prepare_dataset()
+        >>> train_df, val_df, test_df = prepare_dataset()
         >>> feature_cols = get_feature_columns(train_df)
     """
     log("=" * 60)
-    log("Preparing Leakage-Free Dataset")
+    log("Preparing Leakage-Free Dataset (Day-Frozen Version)")
     log("=" * 60)
+
+    # 缓存文件路径
+    CACHE_DIR = OUTPUT_DIR / "features_cache"
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache_file = CACHE_DIR / f"day_frozen_features_lw{label_window_hours}h.parquet"
 
     # 1. Load raw data
     gift, click, user, streamer, room = load_raw_data()
 
-    # 2. Click-level labels (removes watch_live_time automatically)
-    click_with_labels = prepare_click_level_labels(gift, click, label_window_hours)
+    # 2. 尝试从缓存加载
+    if use_cache and cache_file.exists():
+        log(f"Loading cached features from {cache_file}")
+        click_with_features = pd.read_parquet(cache_file)
+        log(f"  Loaded {len(click_with_features):,} records from cache", "SUCCESS")
+    else:
+        # 2. Click-level labels (removes watch_live_time automatically)
+        click_with_labels = prepare_click_level_labels(gift, click, label_window_hours)
 
-    # 3. 7-7-7 split
+        # 3. Create day-frozen historical features (before split!)
+        # 这样训练/验证/测试都用同一套逻辑
+        click_with_features = create_day_frozen_features(gift, click_with_labels)
+
+        # 保存缓存
+        if use_cache:
+            click_with_features.to_parquet(cache_file)
+            log(f"Saved features to cache: {cache_file}", "SUCCESS")
+
+    # 4. 7-7-7 split
     train_df, val_df, test_df = split_by_days(
-        click_with_labels, train_days, val_days, test_days, gap_days
+        click_with_features, train_days, val_days, test_days, gap_days
     )
 
-    # 4. Get train end timestamp for frozen features
-    train_end_ts = train_df['timestamp'].max()
-
-    # 5. Create or load frozen lookups
-    cache_key = f"frozen_{train_days}_{val_days}_{test_days}_{gap_days}_{label_window_hours}.pkl"
-    cache_path = CACHE_DIR / cache_key
-
-    if use_cache and cache_path.exists():
-        log(f"Loading cached lookups from {cache_path}")
-        with open(cache_path, 'rb') as f:
-            lookups = pickle.load(f)
-    else:
-        # 传递原始 click 数据（含 watch_live_time）用于计算历史观看时长
-        lookups = create_frozen_lookups(gift, train_end_ts, click=click)
-        with open(cache_path, 'wb') as f:
-            pickle.dump(lookups, f)
-        log(f"Cached lookups to {cache_path}")
-
-    # 6. Apply frozen features (Train 需要 past-only 检查)
-    train_df = apply_frozen_features(train_df, lookups, is_train=True)
-    val_df = apply_frozen_features(val_df, lookups, is_train=False)
-    test_df = apply_frozen_features(test_df, lookups, is_train=False)
-
-    # 7. Add static features
+    # 5. Add static features
     train_df = add_static_features(train_df, user, streamer, room)
     val_df = add_static_features(val_df, user, streamer, room)
     test_df = add_static_features(test_df, user, streamer, room)
 
-    # 8. Create targets
+    # 6. Create targets
     for df in [train_df, val_df, test_df]:
         df['target'] = np.log1p(df['gift_price_label'])
         df['target_raw'] = df['gift_price_label']
         df['is_gift'] = (df['gift_price_label'] > 0).astype(int)
 
-    # 9. Encode all object/category columns
-    for df in [train_df, val_df, test_df]:
-        for col in df.columns:
-            if df[col].dtype == 'object' or str(df[col].dtype) == 'category':
-                df[col] = df[col].fillna('unknown').astype(str)
-                df[col] = pd.Categorical(df[col]).codes
+    # 7. Encode all object/category columns (Train 拟合，Val/Test 复用)
+    # 先识别需要编码的列
+    cat_cols = []
+    for col in train_df.columns:
+        if train_df[col].dtype == 'object' or str(train_df[col].dtype) == 'category':
+            cat_cols.append(col)
 
-    # 10. Fill NaN for numeric columns
+    # Train 拟合 categories，Val/Test 复用同一映射
+    for col in cat_cols:
+        # 填充 NaN
+        train_df[col] = train_df[col].fillna('unknown').astype(str)
+        val_df[col] = val_df[col].fillna('unknown').astype(str)
+        test_df[col] = test_df[col].fillna('unknown').astype(str)
+
+        # 用 Train 的唯一值建立 categories（加上 'unknown' 兜底）
+        train_categories = list(train_df[col].unique())
+        if 'unknown' not in train_categories:
+            train_categories.append('unknown')
+
+        # 创建带固定 categories 的 Categorical，未知值映射为 'unknown'
+        for df in [train_df, val_df, test_df]:
+            # 将 Val/Test 中 Train 没见过的值替换为 'unknown'
+            df[col] = df[col].apply(lambda x: x if x in train_categories else 'unknown')
+            df[col] = pd.Categorical(df[col], categories=train_categories).codes
+
+    log(f"  Encoded {len(cat_cols)} categorical columns (train-fitted)", "SUCCESS")
+
+    # 8. Fill NaN for numeric columns
     for df in [train_df, val_df, test_df]:
         numeric_cols = df.select_dtypes(include=[np.number]).columns
         df[numeric_cols] = df[numeric_cols].fillna(0)
@@ -646,7 +554,7 @@ def prepare_dataset(train_days=7, val_days=7, test_days=7, gap_days=0,
     log(f"  Test:  {len(test_df):,} (gift_rate={test_df['is_gift'].mean()*100:.2f}%)")
     log("=" * 60)
 
-    return train_df, val_df, test_df, lookups
+    return train_df, val_df, test_df
 
 
 # =============================================================================
@@ -687,12 +595,6 @@ def verify_feature_columns(feature_cols):
     for f in FORBIDDEN_FEATURES:
         assert f not in feature_cols, f"Forbidden feature found: {f}"
 
-    # 检查 gift 相关特征必须带 _past 后缀
-    gift_features = [f for f in feature_cols if 'gift' in f.lower() and 'label' not in f]
-    for f in gift_features:
-        if not f.endswith('_past'):
-            log(f"WARNING: Gift feature without _past suffix: {f}", "WARNING")
-
     log("Feature column verification: PASSED", "SUCCESS")
 
 
@@ -727,7 +629,8 @@ def verify_no_leakage(df, gift, n_samples=100):
     """
     验证特征无泄漏（抽样检查）
 
-    对于每个样本，验证 pair_gift_count_past 等于真实的 past-only count。
+    对于每个样本，验证 pair_gift_cnt_hist 等于真实的 past-day count。
+    Day-Frozen: 只用 day < 当前 day 的历史
 
     Args:
         df: DataFrame with features
@@ -739,31 +642,34 @@ def verify_no_leakage(df, gift, n_samples=100):
     """
     log(f"Verifying no leakage ({n_samples} samples)...")
 
-    gift_sorted = gift.sort_values('timestamp')
+    gift = gift.copy()
+    gift['day'] = pd.to_datetime(gift['timestamp'], unit='ms').dt.normalize()
+
     errors = []
 
     sample_idx = np.random.choice(len(df), min(n_samples, len(df)), replace=False)
 
     for idx in sample_idx:
         row = df.iloc[idx]
-        click_ts = row['timestamp']
+        click_day = pd.to_datetime(row['timestamp'], unit='ms').normalize()
         user_id = row['user_id']
         streamer_id = row['streamer_id']
 
-        # 计算真实的 past-only count
-        true_past = gift_sorted[
-            (gift_sorted['user_id'] == user_id) &
-            (gift_sorted['streamer_id'] == streamer_id) &
-            (gift_sorted['timestamp'] < click_ts)  # 严格 <
+        # 计算真实的 past-day count (day < click_day)
+        true_past = gift[
+            (gift['user_id'] == user_id) &
+            (gift['streamer_id'] == streamer_id) &
+            (gift['day'] < click_day)  # 严格 < 当前天
         ]
         true_count = len(true_past)
 
         # 对比特征值
-        feature_count = row['pair_gift_count_past']
+        feature_count = row['pair_gift_cnt_hist']
 
         if feature_count != true_count:
             errors.append({
                 'idx': idx,
+                'day': click_day,
                 'expected': true_count,
                 'got': feature_count,
                 'diff': feature_count - true_count
@@ -772,7 +678,7 @@ def verify_no_leakage(df, gift, n_samples=100):
     if errors:
         log(f"Leakage verification: FAILED ({len(errors)}/{n_samples} samples)", "ERROR")
         for e in errors[:3]:
-            log(f"  idx={e['idx']}: expected={e['expected']}, got={e['got']}, diff={e['diff']}")
+            log(f"  idx={e['idx']}, day={e['day']}: expected={e['expected']}, got={e['got']}, diff={e['diff']}")
         return False
     else:
         log(f"Leakage verification: PASSED ({n_samples}/{n_samples} samples)", "SUCCESS")
@@ -821,7 +727,7 @@ def run_full_verification(train_df, val_df, test_df, gift, feature_cols):
         all_passed = False
 
     log("\nVerifying test set...")
-    if not verify_no_leakage(test_df, gift, n_samples=50):
+    if not verify_no_leakage(test_df, gift, n_samples=100):
         all_passed = False
 
     log("=" * 60)
@@ -839,11 +745,11 @@ def run_full_verification(train_df, val_df, test_df, gift, feature_cols):
 # =============================================================================
 if __name__ == '__main__':
     # 示例用法
-    print("Gift EVpred Data Utils - Example Usage")
+    print("Gift EVpred Data Utils - Day-Frozen Version")
     print("=" * 60)
 
     # 准备数据
-    train_df, val_df, test_df, lookups = prepare_dataset()
+    train_df, val_df, test_df = prepare_dataset()
 
     # 获取特征列
     feature_cols = get_feature_columns(train_df)
