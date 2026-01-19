@@ -1,44 +1,55 @@
 # 📌 Next Steps
 
-> **最后更新**: 2026-01-09 | **战略转向**: 从"预测更准"转向"分配更对"
+> **最后更新**: 2026-01-19 | **当前焦点**: gift_EVpred 识别大哥阶段
 
 ---
 
-## 🚨 战略判断
+## 🎯 当前焦点：gift_EVpred
 
-**不再继续的方向**（节省时间）：
-- ❌ 延迟反馈建模 — 86.3%礼物立即发生
-- ❌ 两段式作为主排序器 — Top-1% 35.7% vs 54.5%
-- ❌ 单纯凹收益 — 需配合真实约束才有效
-- ❌ 多任务学习 — 极稀疏场景无优势
+**核心目标**：提升 RevCap@1%（当前最优 52.60%）
 
-**主攻方向**：分配层优化（带约束、带外部性、带风险的资源分配）
+**已验证结论**：
+- ✅ Direct + raw Y 最优（+39.6% vs log Y）
+- ❌ LightGBM 失败（-14.5%，树模型不适合稀疏数据）
+- ❌ Three-Stage 失败（Direct raw Y 已隐式学会找 whale）
 
 ---
 
-## 🔴 P0 - 必须完成
+## 🔴 P0 - 必须完成（gift_EVpred）
+
+| # | 实验 ID | 任务 | 状态 | 验收标准 | 备注 |
+|---|---------|------|------|----------|------|
+| 1 | **EXP-20260119-EVpred-01** | **指标体系落地** | ⏳ 待执行 | 统一模板 + RevCap 曲线 | 所有实验使用 |
+| 2 | **EXP-20260119-EVpred-02** | **历史观看先验特征** | ⏳ 待执行 | RevCap > 54% | 替代 watch_live_time |
+
+---
+
+## 🟡 P1 - 应该完成（gift_EVpred）
+
+| # | 实验 ID | 任务 | 状态 | 验收标准 | 备注 |
+|---|---------|------|------|----------|------|
+| 1 | **EXP-20260119-EVpred-03** | **样本加权回归** | ⏳ 待执行 | RevCap > 55% | $w_i=(1+y_i)^\alpha$ |
+
+---
+
+## 🟢 P2 - 可选完成（gift_EVpred）
 
 | # | 任务 | 状态 | 验收标准 | 备注 |
 |---|------|------|----------|------|
-| 1 | **MVP-5.1 召回-精排分工** | 🔴 就绪 | Top-1%≥56% & NDCG↑ | Direct召回 + Stage2精排 |
-| 2 | **MVP-5.2 影子价格/供需匹配** | 🔴 就绪 | 收益+5% vs Greedy | Primal-Dual框架，多约束统一 |
+| 1 | Whale 专属特征 | 待立项 | RevCap > 54% | 历史大额打赏次数/金额 |
+| 2 | 尝试 MLP | 待立项 | RevCap > 55% | NN 可能比树更适合稀疏 |
 
 ---
 
-## 🟡 P1 - 应该完成
+## 📦 Allocation 待续（暂停）
 
-| # | 任务 | 状态 | 验收标准 | 备注 |
-|---|------|------|----------|------|
-| 1 | **MVP-5.3 鲸鱼分散 (b-matching)** | 🔴 就绪 | 超载率<10%, Gini↓ | 鲸鱼单独匹配层 |
-| 2 | **MVP-5.4 风险控制 (UCB/CVaR)** | ⏳ | CVaR@5%改善 | 降低策略波动 |
+**已关闭**：
+- ❌ MVP-5.1 召回-精排分工 — Recall Coverage 仅 5.5%
+- ❌ MVP-5.2 影子价格 — 收益仅 +2.74%，不如 Greedy+Rules
 
----
-
-## 🟢 P2 - 可选完成
-
-| # | 任务 | 状态 | 验收标准 | 备注 |
-|---|------|------|----------|------|
-| 1 | **MVP-5.5 多目标生态调度** | ⏳ | Pareto前沿 | α权重扫描 |
+**待验证**：
+- ⏳ MVP-5.3 鲸鱼分散 (b-matching)
+- ⏳ MVP-5.4 风险控制 (UCB/CVaR)
 
 ---
 
@@ -46,77 +57,52 @@
 
 | # | 任务 | 完成日期 | 产出 |
 |---|------|---------|------|
-| **Phase 0-3 (12 MVP)** |||
-| 1 | MVP-0.1 KuaiLive EDA | 2026-01-08 | Gini=0.94, Top1%=60% |
-| 2 | MVP-0.2 Baseline | 2026-01-08 | Top-1%=56.2%, Spearman=0.891 |
-| 3 | MVP-0.3 Simulator V1 | 2026-01-08 | Gini误差<5%, Greedy 3x Random |
-| 4 | MVP-1.1 两段式建模 | 2026-01-08 | 揭示与Baseline不可直接对比 |
-| 5 | MVP-1.1-fair 公平对比 | 2026-01-08 | Direct胜出 (54.5% vs 35.7%) |
-| 6 | MVP-1.2 延迟建模 | 2026-01-08 | 延迟不是问题，DG2关闭 |
-| 7 | MVP-1.2-audit 延迟审计 | 2026-01-08 | 代码bug修复，86.3%立即发生 |
-| 8 | MVP-1.3 多任务学习 | 2026-01-08 | 无优势 (Δ=-1.76pp)，DG5关闭 |
-| 9 | MVP-1.4 诊断拆解 | 2026-01-08 | Stage1分类不足，Stage2精排有优势 |
-| 10 | MVP-2.1 凹收益分配 | 2026-01-08 | Δ=-1.17%无优势，DG3关闭 |
-| 11 | MVP-2.2 冷启动约束 | 2026-01-08 | 软约束+32%收益，Gate-2关闭 |
-| 12 | MVP-3.1 OPE验证 | 2026-01-08 | SNIPS RelErr<10%，Gate-3关闭 |
-| **Phase 4 (2 MVP)** |||
-| 13 | MVP-4.1+ Simulator V2金额 | 2026-01-09 | P50=0%, P90=13%, Mean=24% ✅ |
-| 14 | MVP-4.2 Simulator V2并发 | 2026-01-09 | 边际递减24.4%, 拥挤率68% ✅ |
-| **Phase 5 规划** |||
-| 15 | 战略梳理+立项 | 2026-01-09 | Hub更新，Roadmap创建 |
-
----
-
-## 📊 Phase 5 决策树
-
-```
-MVP-5.1 (召回-精排分工)
-    ├── If Top-1%≥56% & NDCG↑ → Gate-5A PASS → 采用分工架构
-    └── Else → 保留 Direct-only
-
-MVP-5.2 (影子价格)
-    ├── If 收益≥+5% & 约束满足 → Gate-5B PASS → 替换Greedy+规则
-    └── Else → 保留 Greedy + 软约束
-
-MVP-5.3 (鲸鱼分散)
-    ├── If 超载率<10% & Gini↓ → Gate-5C PASS → 鲸鱼单独匹配
-    └── Else → 统一分配
-
-MVP-5.4 (风险控制)
-    ├── If CVaR改善 & 波动↓ → Gate-5D PASS → UCB/LCB
-    └── Else → 纯EV排序
-```
-
----
-
-## 📅 里程碑
-
-| 周 | 任务 | 产出 | 状态 |
-|----|------|------|------|
-| W1 | MVP-5.1 召回-精排 | Top-1%≥56% & NDCG↑ | 🔴 就绪 |
-| W1-2 | MVP-5.2 影子价格 | 收益+5%，约束统一 | 🔴 就绪 |
-| W2 | MVP-5.3 鲸鱼分散 | 超载率<10% | ⏳ |
-| W2-3 | MVP-5.4 风险控制 | CVaR改善 | ⏳ |
-| W3 | MVP-5.5 多目标 | Pareto 前沿 | ⏳ |
+| **gift_EVpred** |||
+| 1 | MVP-1.0 Day-Frozen Baseline | 2026-01-18 | RevCap@1%=37.73% |
+| 2 | MVP-1.1 Three-Stage | 2026-01-18 | RevCap@1%=43.60% |
+| 3 | MVP-1.2 Raw Y vs Log Y | 2026-01-18 | **RevCap@1%=52.60% (+39.6%)** ✅ 当前最优 |
+| 4 | MVP-2.0 LightGBM | 2026-01-18 | ❌ 失败（-14.5%） |
+| 5 | MVP-3.0 三层指标体系设计 | 2026-01-18 | 识别层/估值层/分配层框架 |
+| **gift_allocation Phase 0-3** |||
+| 6 | MVP-0.1 KuaiLive EDA | 2026-01-08 | Gini=0.94, Top1%=60% |
+| 7 | MVP-0.2 Baseline | 2026-01-08 | Top-1%=56.2%, Spearman=0.891 |
+| 8 | MVP-0.3 Simulator V1 | 2026-01-08 | Gini误差<5%, Greedy 3x Random |
+| 9 | MVP-1.1~1.4 估计层 | 2026-01-08 | Direct 胜出 (54.5% vs 35.7%) |
+| 10 | MVP-2.1~2.2 分配层 | 2026-01-08 | 软约束+32%收益 |
+| 11 | MVP-3.1 OPE验证 | 2026-01-08 | SNIPS RelErr<10% |
+| **gift_allocation Phase 4** |||
+| 12 | MVP-4.1+ Simulator V2金额 | 2026-01-09 | P50=0%, P90=13%, Mean=24% ✅ |
+| 13 | MVP-4.2 Simulator V2并发 | 2026-01-09 | 边际递减24.4%, 拥挤率68% ✅ |
+| **gift_allocation Phase 5** |||
+| 14 | MVP-5.1 召回-精排 | 2026-01-09 | ❌ FAIL (Recall Coverage 5.5%) |
+| 15 | MVP-5.2 影子价格 | 2026-01-09 | ❌ FAIL (收益仅+2.74%) |
 
 ---
 
 ## 📝 快速命令
 
-### 查看 Roadmap
+### 查看 EVpred Hub
 ```bash
-cat gift_allocation/gift_allocation_roadmap.md
+cat gift_EVpred/gift_EVpred_hub.md
 ```
 
-### 查看 Hub
+### 查看 EVpred Roadmap
 ```bash
-cat gift_allocation/gift_allocation_hub.md
+cat gift_EVpred/gift_EVpred_roadmap.md
 ```
 
-### 开始 MVP-5.1
+### 开始 EXP-01 (指标体系落地)
 ```bash
-# 1. 创建 coding prompt: p 5.1
-# 2. 实现召回-精排流水线
-# 3. 评估 Top-1% 和 NDCG
-# 4. 更新实验报告
+# 1. 阅读实验计划
+cat gift_EVpred/exp/exp_metrics_landing_20260119.md
+# 2. 实现 RevCap 曲线 + 稳定性评估
+# 3. 生成统一报告模板
+```
+
+### 开始 EXP-02 (历史观看先验)
+```bash
+# 1. 阅读实验计划
+cat gift_EVpred/exp/exp_watch_history_prior_20260119.md
+# 2. 在 data_utils.py 中添加新特征
+# 3. 评估 RevCap@1% > 54%
 ```

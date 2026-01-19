@@ -1,0 +1,94 @@
+{
+  "experiment_id": "EXP-20260119-EVpred-01",
+  "mvp": "MVP-3.1",
+  "date": "2026-01-19",
+  "model": {
+    "name": "Ridge Regression",
+    "alpha": 1.0,
+    "target": "raw Y (target_raw)",
+    "scaling": "StandardScaler"
+  },
+  "data": {
+    "train_size": 1629415,
+    "val_size": 1717199,
+    "test_size": 1409533,
+    "features": 31,
+    "split": "7-7-7 by days"
+  },
+  "revcap_curve": {
+    "0.01%": {
+      "model": 0.0667,
+      "oracle": 0.4212,
+      "random": 0.0001,
+      "normalized": 0.1583
+    },
+    "0.1%": {
+      "model": 0.2192,
+      "oracle": 0.8385,
+      "random": 0.001,
+      "normalized": 0.2614
+    },
+    "0.5%": {
+      "model": 0.4556,
+      "oracle": 0.9828,
+      "random": 0.005,
+      "normalized": 0.4636
+    },
+    "1%": {
+      "model": 0.526,
+      "oracle": 0.9954,
+      "random": 0.01,
+      "normalized": 0.5285
+    },
+    "2%": {
+      "model": 0.5777,
+      "oracle": 1.0,
+      "random": 0.02,
+      "normalized": 0.5777
+    },
+    "5%": {
+      "model": 0.6472,
+      "oracle": 1.0,
+      "random": 0.05,
+      "normalized": 0.6472
+    },
+    "10%": {
+      "model": 0.7014,
+      "oracle": 1.0,
+      "random": 0.1,
+      "normalized": 0.7014
+    }
+  },
+  "stability": {
+    "revcap_by_day": {
+      "day_1": 0.5531,
+      "day_2": 0.5264,
+      "day_3": 0.4717,
+      "day_4": 0.5091,
+      "day_5": 0.578,
+      "day_6": 0.6042,
+      "day_7": 0.4281
+    },
+    "mean": 0.5244,
+    "std": 0.0565,
+    "cv": 0.1078
+  },
+  "tail_calibration": {
+    "Top 0.1%": {
+      "sum_ratio": 2.3903,
+      "mean_ratio": 2.3903
+    },
+    "Top 0.5%": {
+      "sum_ratio": 2.1999,
+      "mean_ratio": 2.1999
+    },
+    "Top 1%": {
+      "sum_ratio": 2.3328,
+      "mean_ratio": 2.3328
+    },
+    "Top 5%": {
+      "sum_ratio": 2.5154,
+      "mean_ratio": 2.5154
+    }
+  }
+}

@@ -78,9 +78,38 @@ $$\hat{y} = \sum_{k=1}^{K} f_k(\mathbf{x})$$
 |----|-----|
 | 来源 | KuaiLive |
 | 路径 | `data/KuaiLive/` |
+| 数据处理 | `gift_EVpred/data_utils.py` |
 | Train/Val/Test | 1,629,415 / 1,717,199 / 1,409,533 |
+| 时间划分 | 7-7-7 天（无 gap），时间顺序无重叠 |
 | 特征维度 | 31 (Day-Frozen) |
-| 预测目标 | **raw Y**（gift_price_label） |
+| 预测目标 | `target_raw`（gift_price_label，raw Y） |
+| Label 窗口 | click 后 1 小时内 gift 总额 |
+
+**数据处理流程**：
+```python
+from gift_EVpred.data_utils import prepare_dataset, get_feature_columns
+train_df, val_df, test_df = prepare_dataset(train_days=7, val_days=7, test_days=7)
+feature_cols = get_feature_columns(train_df)  # 31 特征
+```
+
+**Day-Frozen 机制**：每个 click 的历史特征只使用 day < 当前 day 的历史，避免同天信息泄漏。详见 `gift_EVpred/DATA_PROCESSING_GUIDE.md`。
+
+### 特征列表 (31 维)
+
+| 类别 | 特征 | 说明 |
+|------|------|------|
+| **Pair 历史 (3)** | `pair_gift_cnt_hist`, `pair_gift_sum_hist`, `pair_gift_mean_hist` | user-streamer 配对的历史打赏 |
+| **User 历史 (3)** | `user_gift_cnt_hist`, `user_gift_sum_hist`, `user_gift_mean_hist` | 用户历史打赏 |
+| **Streamer 历史 (3)** | `str_gift_cnt_hist`, `str_gift_sum_hist`, `str_gift_mean_hist` | 主播收到的历史打赏 |
+| **User Profile (10)** | `age`, `gender`, `device_brand`, `device_price`, `fans_num`, `follow_num`, `accu_watch_live_cnt`, `accu_watch_live_duration`, `is_live_streamer`, `is_photo_author` | 用户画像 |
+| **Streamer Profile (7)** | `str_fans_user_num`, `str_fans_group_fans_num`, `str_follow_user_num`, `str_accu_live_cnt`, `str_accu_live_duration`, `str_accu_play_cnt`, `str_accu_play_duration` | 主播画像 |
+| **Room (2)** | `live_type`, `live_content_category` | 直播间属性 |
+| **Time (3)** | `hour`, `day_of_week`, `is_weekend` | 时间特征 |
+
+**禁止使用的特征**（已在 `data_utils.py` 中自动排除）：
+- `watch_live_time` / `watch_time_log`：结果泄漏，包含打赏后的观看时长
+
+**泄漏验证**：通过 `verify_no_leakage()` 抽样检查（100 样本 PASSED）
 
 ## 3.2 模型对比
 
@@ -204,13 +233,17 @@ $$\hat{y} = \sum_{k=1}^{K} f_k(\mathbf{x})$$
 
 | 配置 | RevCap@1% | vs Ridge | 说明 |
 |------|-----------|----------|------|
-| Default (no early stop) | 48.97% | -3.63% | 禁用 early stopping |
+| Default (ES触发, 1 tree) | 44.97% | -14.51% | Early stop 第 1 轮 |
+| **500 trees (禁用 ES)** | **34.95%** | **-33.57%** | **更多树更差！** |
 | Shallow trees (max_depth=3) | 38.59% | -14.01% | 限制树深度 |
-| **Strong regularization** | **49.49%** | **-3.11%** | **最佳配置** |
+| Strong regularization | 49.49% | -3.11% | 最佳配置 |
 | MAE objective | 0.71% | -51.89% | 完全失败 |
 | Huber loss | 34.33% | -18.27% | 鲁棒损失无效 |
 
-> **结论**：即使最佳配置（强正则化）仍比 Ridge 低 3.11%
+> **关键发现（2026-01-18 补充实验）**：
+> - 强制跑 500 棵树（禁用 early stopping）反而 RevCap **从 44.97% 降到 34.95%**
+> - Early stopping 实际上在"救场"，只用 1 棵树反而比 500 棵树好
+> - **这证明树模型本质上不适合这个任务，不是参数调优能解决的问题**
 
 ## 5.3 深度分析：分类 vs 回归
 

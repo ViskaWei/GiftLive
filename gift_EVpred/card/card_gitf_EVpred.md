@@ -8,3 +8,5 @@
 下一步：
      A. Frozen：仅用 Train 窗口内历史计算 pair/user/streamer 的统计量；Val/Test 只查表
      B. Rolling：对每个 click 严格用 gift_ts < click_ts（searchsorted(side='left')）构造 past-only 特征
+
+1-7每天打赏是不一样的需要单独建模

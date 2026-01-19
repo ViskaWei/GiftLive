@@ -102,23 +102,30 @@ def load_raw_data():
 # =============================================================================
 # Click-Level 标签构建
 # =============================================================================
-def prepare_click_level_labels(gift, click, label_window_hours=1):
+def prepare_click_level_labels(gift, click, label_window_minutes=1):
     """
-    构建 Click-level 标签
+    构建 Click-level 标签（Last-Touch Attribution）
+
+    Attribution Model: Last-touch (Last-click) within lookback window
+    Dedup Rule: 每个 gift 只能归因给 1 条 click（最近的一条）
+    Aggregation: 再把 gift 金额 sum 到 click-level label
 
     Args:
         gift: gift DataFrame
         click: click DataFrame
-        label_window_hours: 标签窗口（小时）
+        label_window_minutes: 标签窗口（分钟），默认 1 分钟
+            - 数据分析显示 98.2% 的 gift 在 click 同一毫秒内发生
+            - 1 分钟窗口已覆盖 98.45% 的 gift（97.11% 的金额）
+            - 详见 exp/exp_label_window_analysis_20260119.md
 
     Returns:
         DataFrame: click 数据 + gift_price_label 列（0 或正数）
 
     注意:
         - 会自动删除 watch_live_time 列（泄漏特征）
-        - Label = click 后 label_window_hours 内的 gift 总额
+        - 每个 gift 只归因给最近的一条 click，避免 double counting
     """
-    log(f"Preparing click-level labels (window={label_window_hours}h)...")
+    log(f"Preparing click-level labels (Last-Touch, window={label_window_minutes}min)...")
 
     click = click.copy()
     gift = gift.copy()
@@ -128,38 +135,73 @@ def prepare_click_level_labels(gift, click, label_window_hours=1):
         click = click.drop(columns=['watch_live_time'])
         log("Removed watch_live_time (leakage feature)", "WARNING")
 
-    # 转换时间
-    click['timestamp_dt'] = pd.to_datetime(click['timestamp'], unit='ms')
-    gift['timestamp_dt'] = pd.to_datetime(gift['timestamp'], unit='ms')
+    # ==========================================================================
+    # Step 1: 从 gift 角度 merge click（反向思路：先归因，再聚合）
+    # ==========================================================================
+    window_ms = label_window_minutes * 60 * 1000  # 转换为毫秒
 
-    # Label window
-    click['label_end_dt'] = click['timestamp_dt'] + pd.Timedelta(hours=label_window_hours)
-
-    # Merge and filter
-    merged = click[['user_id', 'streamer_id', 'live_id', 'timestamp', 'timestamp_dt', 'label_end_dt']].merge(
-        gift[['user_id', 'streamer_id', 'live_id', 'timestamp_dt', 'gift_price']],
+    merged = gift.merge(
+        click[['user_id', 'streamer_id', 'live_id', 'timestamp']].rename(
+            columns={'timestamp': 'click_ts'}
+        ),
         on=['user_id', 'streamer_id', 'live_id'],
-        how='left',
-        suffixes=('_click', '_gift')
+        how='inner'
     )
 
-    # Filter: gift within window
+    # ==========================================================================
+    # Step 2: 筛选 gift 在 click 的窗口内（click_ts <= gift_ts <= click_ts + window）
+    # ==========================================================================
     merged = merged[
-        (merged['timestamp_dt_gift'] >= merged['timestamp_dt_click']) &
-        (merged['timestamp_dt_gift'] <= merged['label_end_dt'])
+        (merged['timestamp'] >= merged['click_ts']) &
+        (merged['timestamp'] <= merged['click_ts'] + window_ms)
     ]
 
-    # Aggregate
-    gift_agg = merged.groupby(
-        ['user_id', 'streamer_id', 'live_id', 'timestamp']
-    )['gift_price'].sum().reset_index().rename(columns={'gift_price': 'gift_price_label'})
+    log(f"  Gift-Click pairs before dedup: {len(merged):,}")
 
-    # Merge back
-    click = click.merge(gift_agg, on=['user_id', 'streamer_id', 'live_id', 'timestamp'], how='left')
+    # ==========================================================================
+    # Step 3: Last-Touch - 每个 gift 只保留最近的 click（click_ts 最大）
+    # ==========================================================================
+    if len(merged) > 0:
+        merged = merged.loc[
+            merged.groupby(['user_id', 'streamer_id', 'live_id', 'timestamp'])['click_ts'].idxmax()
+        ]
+
+    log(f"  Gift-Click pairs after dedup: {len(merged):,} (每个 gift 只归因 1 条 click)")
+
+    # ==========================================================================
+    # Step 4: 聚合到 click 级别
+    # ==========================================================================
+    if len(merged) > 0:
+        gift_agg = merged.groupby(
+            ['user_id', 'streamer_id', 'live_id', 'click_ts']
+        )['gift_price'].sum().reset_index().rename(columns={
+            'click_ts': 'timestamp',
+            'gift_price': 'gift_price_label'
+        })
+    else:
+        gift_agg = pd.DataFrame(columns=['user_id', 'streamer_id', 'live_id', 'timestamp', 'gift_price_label'])
+
+    # ==========================================================================
+    # Step 5: Merge 回 click
+    # ==========================================================================
+    click = click.merge(
+        gift_agg,
+        on=['user_id', 'streamer_id', 'live_id', 'timestamp'],
+        how='left'
+    )
     click['gift_price_label'] = click['gift_price_label'].fillna(0)
 
-    # 清理临时列
-    click = click.drop(columns=['label_end_dt'], errors='ignore')
+    # ==========================================================================
+    # Step 6: 验证护栏 - 总金额守恒
+    # ==========================================================================
+    total_label = click['gift_price_label'].sum()
+    total_gift = gift['gift_price'].sum()
+    ratio = total_label / total_gift if total_gift > 0 else 0
+
+    if ratio > 1.01:
+        log(f"WARNING: 金额膨胀 {ratio:.2%}, label={total_label:,.0f}, gift={total_gift:,.0f}", "WARNING")
+    else:
+        log(f"  总金额守恒: label={total_label:,.0f}, gift={total_gift:,.0f}, ratio={ratio:.4f}", "SUCCESS")
 
     log(f"Click-level data: {len(click):,} records, gift_rate={click['gift_price_label'].gt(0).mean()*100:.2f}%")
 
@@ -442,7 +484,7 @@ def add_static_features(df, user, streamer, room):
 # 主函数
 # =============================================================================
 def prepare_dataset(train_days=7, val_days=7, test_days=7, gap_days=0,
-                    label_window_hours=1, use_cache=True):
+                    label_window_minutes=1, use_cache=True):
     """
     准备无泄漏的数据集（主函数）
 
@@ -458,7 +500,11 @@ def prepare_dataset(train_days=7, val_days=7, test_days=7, gap_days=0,
         val_days: 验证集天数 (default: 7)
         test_days: 测试集天数 (default: 7)
         gap_days: Train-Val/Val-Test gap 天数 (default: 0)
-        label_window_hours: 标签窗口（小时）(default: 1)
+        label_window_minutes: 标签窗口（分钟）(default: 1)
+            - 数据分析显示 98.2% 的 gift 在 click 同一毫秒内发生
+            - 1 分钟窗口已覆盖 98.45% 的 gift（97.11% 的金额）
+            - 如需更大窗口，可设为 5/10/60 分钟
+            - 详见 exp/exp_label_window_analysis_20260119.md
         use_cache: 是否使用缓存 (default: True)
 
     Returns:
@@ -466,17 +512,18 @@ def prepare_dataset(train_days=7, val_days=7, test_days=7, gap_days=0,
 
     Example:
         >>> from gift_EVpred.data_utils import prepare_dataset, get_feature_columns
-        >>> train_df, val_df, test_df = prepare_dataset()
+        >>> train_df, val_df, test_df = prepare_dataset()  # 默认 1 分钟窗口
+        >>> train_df, val_df, test_df = prepare_dataset(label_window_minutes=60)  # 1 小时窗口
         >>> feature_cols = get_feature_columns(train_df)
     """
     log("=" * 60)
     log("Preparing Leakage-Free Dataset (Day-Frozen Version)")
     log("=" * 60)
 
-    # 缓存文件路径
+    # 缓存文件路径（包含窗口长度以区分不同配置）
     CACHE_DIR = OUTPUT_DIR / "features_cache"
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    cache_file = CACHE_DIR / f"day_frozen_features_lw{label_window_hours}h.parquet"
+    cache_file = CACHE_DIR / f"day_frozen_features_lw{label_window_minutes}min.parquet"
 
     # 1. Load raw data
     gift, click, user, streamer, room = load_raw_data()
@@ -488,7 +535,7 @@ def prepare_dataset(train_days=7, val_days=7, test_days=7, gap_days=0,
         log(f"  Loaded {len(click_with_features):,} records from cache", "SUCCESS")
     else:
         # 2. Click-level labels (removes watch_live_time automatically)
-        click_with_labels = prepare_click_level_labels(gift, click, label_window_hours)
+        click_with_labels = prepare_click_level_labels(gift, click, label_window_minutes)
 
         # 3. Create day-frozen historical features (before split!)
         # 这样训练/验证/测试都用同一套逻辑
