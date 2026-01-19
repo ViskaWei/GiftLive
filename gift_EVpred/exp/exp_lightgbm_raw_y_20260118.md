@@ -13,13 +13,13 @@
 
 | 验证问题 | 结果 | 结论 |
 |---------|------|------|
-| Q2.1: LightGBM 是否优于 Linear？ | ❌ **-14.5%** | 树模型失败 |
+| Q2.1: LightGBM 是否优于 Linear？ | ❌ **-3.1% ~ -14.5%** | 树模型失败 |
 
-| 指标 | Ridge (Baseline) | LightGBM | 提升 |
+| 指标 | Ridge (Baseline) | LightGBM (default) | LightGBM (best) |
 |------|-----------------|----------|------|
-| Revenue Capture @1% | 52.60% | 44.97% | **-14.5%** |
-| Revenue Capture @5% | 64.72% | 52.80% | -18.4% |
-| Spearman | 0.0644 | 0.0504 | -21.7% |
+| Revenue Capture @1% | **52.60%** | 44.97% (-14.5%) | 49.49% (-3.1%) |
+| Revenue Capture @5% | **64.72%** | 52.80% | - |
+| Spearman | **0.0644** | 0.0504 | - |
 
 | Type | Link |
 |------|------|
@@ -200,15 +200,17 @@ $$\hat{y} = \sum_{k=1}^{K} f_k(\mathbf{x})$$
 - Best iteration = 1，说明验证集 loss 在第一轮后就开始上升
 - 原因：树模型对这类高度偏斜数据的拟合很不稳定
 
-## 5.2 尝试过的调优（均失败）
+## 5.2 超参调优结果（均失败）
 
-| 配置 | 结果 |
-|------|------|
-| 浅树 (max_depth=3) | 仍劣于 Ridge |
-| 强正则化 (reg_alpha=1.0) | 无改善 |
-| MAE 损失 | 无改善 |
-| Huber 损失 | 无改善 |
-| 更多 iterations + 禁用 early stopping | 过拟合 |
+| 配置 | RevCap@1% | vs Ridge | 说明 |
+|------|-----------|----------|------|
+| Default (no early stop) | 48.97% | -3.63% | 禁用 early stopping |
+| Shallow trees (max_depth=3) | 38.59% | -14.01% | 限制树深度 |
+| **Strong regularization** | **49.49%** | **-3.11%** | **最佳配置** |
+| MAE objective | 0.71% | -51.89% | 完全失败 |
+| Huber loss | 34.33% | -18.27% | 鲁棒损失无效 |
+
+> **结论**：即使最佳配置（强正则化）仍比 Ridge 低 3.11%
 
 ---
 

@@ -201,14 +201,30 @@ $$\text{Score} = P(\text{whale}) \times E[\text{whale}]$$
 
 ## 6.5 后续发展
 
-> ⚠️ **注意**：本实验完成后，发现 **Direct + raw Y** 方案更优（RevCap@1%=52.68%），超过 Whale-only（43.60%）。
+> ⚠️ **注意**：本实验完成后，发现 **Direct + raw Y** 方案更优（RevCap@1%=52.60%），显著超过 Whale-only（39.48%~43.60%）。
 >
 > 原因：raw Y 作为预测目标已经隐式让模型学会"找大哥"，不需要显式的 Three-Stage 分类。
 
+### 补充实验：Three-Stage + Raw Y (2026-01-18)
+
+| Model | RevCap@1% | RevCap@5% | Spearman |
+|-------|-----------|-----------|----------|
+| **Direct + raw Y** | **52.60%** | **64.72%** | **0.0608** |
+| Whale-only + raw Y | 39.48% | 48.24% | -0.0206 |
+| Whale-only + log Y | 39.77% | 51.69% | 0.0290 |
+
+**关键发现**：
+1. Three-Stage + raw Y (39.48%) 反而比 log Y (39.77%) 更差
+2. Direct + raw Y 比 Whale-only 策略高出 **+33%** (52.60% vs 39.48%)
+3. 原因分析：
+   - P(whale) 分类器精度有限（只有约 2,300 个 whale 样本）
+   - E[whale] 回归样本太少，预测不稳定
+   - 乘法误差累积：3 个阶段的误差相乘
+
 | 方向 | 结论 |
 |------|------|
-| Whale-only 策略 | ❌ 被 Direct + raw Y 超越 |
-| 推荐方案 | ✅ Direct + raw Y（见 exp_raw_vs_log） |
+| Three-Stage 策略 | ❌ 全面失败（raw Y / log Y 均不如 Direct） |
+| 推荐方案 | ✅ **Direct + raw Y**（最简单也最有效） |
 
 ---
 

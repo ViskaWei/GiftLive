@@ -43,8 +43,8 @@ Gate-1：✅ 已通过 - Two-Stage RevCap@1% = 44.42% > Direct 37.73%
 | Gate | 状态 | 结果 | 说明 |
 |------|------|------|------|
 | **Gate-0** | ✅ 通过 | 200/200 | Day-Frozen 特征无泄漏验证 |
-| **Gate-1** | ✅ 通过 | +17.8% | Two-Stage RevCap@1% 优于 Direct |
-| Gate-2 | ⏳ 待定 | - | 模型升级（LightGBM） |
+| **Gate-1** | ✅ 通过 | 52.60% | Direct + raw Y 最优 |
+| **Gate-2** | ❌ 失败 | -14.5% | LightGBM 劣于 Ridge |
 | Gate-3 | ⏳ 远期 | - | 模拟器验证 |
 
 ## 1.2 Gate 定义
@@ -65,12 +65,14 @@ Gate-1：✅ 已通过 - Two-Stage RevCap@1% = 44.42% > Direct 37.73%
 | **结果** | ✅ Two-Stage 44.42% > Direct 37.73%（+17.8%） |
 | **结论** | 推荐 Two-Stage 作为后续 baseline |
 
-### Gate-2: 模型升级
+### Gate-2: 模型升级 【❌ 失败】
 
 | 项 | 内容 |
 |----|------|
 | **验证** | LightGBM 是否优于 Linear 模型 |
-| **状态** | ⏳ 待执行 |
+| **结果** | ❌ LightGBM RevCap@1%=44.97% < Ridge 52.60%（-14.5%） |
+| **原因** | 98.5% 样本 target=0，树模型倾向预测众数 |
+| **结论** | Linear 模型（Ridge）仍是当前最优 |
 
 ### Gate-3: 模拟器验证
 
@@ -90,7 +92,7 @@ Gate-1：✅ 已通过 - Two-Stage RevCap@1% = 44.42% > Direct 37.73%
 | **1.0** | **Day-Frozen Baseline** | **Gate-0/1** | **✅ 完成** | [Link](./exp/exp_baseline_day_frozen_20260118.md) |
 | **1.1** | **Three-Stage (Whale-only)** | Gate-1 | ✅ 完成 | [Link](./exp/exp_three_stage_20260118.md) |
 | **1.2** | **Raw Y vs Log Y** | Gate-1 | **✅ 完成** | [Link](./exp/exp_raw_vs_log_20260118.md) |
-| **2.0** | **LightGBM + raw Y** | Gate-2 | 🔄 进行中 | [Link](./exp/exp_lightgbm_raw_y_20260118.md) |
+| **2.0** | **LightGBM + raw Y** | Gate-2 | **❌ 失败** | [Link](./exp/exp_lightgbm_raw_y_20260118.md) |
 | 3.0 | 模拟器 V1 | Gate-3 | ⏳ 远期 | - |
 
 ## 2.2 下一步优先级
@@ -98,9 +100,10 @@ Gate-1：✅ 已通过 - Two-Stage RevCap@1% = 44.42% > Direct 37.73%
 | 优先级 | 任务 | 预期收益 | 备注 |
 |--------|------|----------|------|
 | ~~🔴 P0-Tech~~ | ~~修复 data_utils.py~~ | ✅ **已验证通过** | 3 个问题不存在，1 个已修复 |
-| 🔴 P0-Model | LightGBM + raw Y | 非线性特征交互 | If >55% → 确认；Else → 特征工程 |
-| 🟡 P1 | 历史观看先验特征 | 替代 watch_live_time | user/pair 历史平均观看时长 |
+| ~~🔴 P0-Model~~ | ~~LightGBM + raw Y~~ | ❌ **失败**（-14.5%） | 树模型不适合稀疏数据 |
+| 🔴 P0-Feature | 历史观看先验特征 | 替代 watch_live_time | user/pair 历史平均观看时长 |
 | 🟡 P1 | 针对 whale 的特征 | 更好区分大额打赏者 | 历史大额打赏次数/金额 |
+| 🟢 P2 | 尝试 MLP | 神经网络可能比树更适合 | 待验证 |
 
 ---
 
@@ -152,13 +155,18 @@ Gate-1：✅ 已通过 - Two-Stage RevCap@1% = 44.42% > Direct 37.73%
 - Log 变换压缩 whale 信号，损失收入捕获能力
 - 业界推荐：收入最大化场景使用 raw Y
 
-## MVP-2.0: LightGBM Two-Stage 【⏳ 计划】
+## MVP-2.0: LightGBM + Raw Y 【❌ 失败】
 
 | 项 | 配置 |
 |----|------|
 | **目标** | 用 LightGBM 替代 Linear 模型 |
 | **预期** | 非线性特征交互可能提升 RevCap |
-| **状态** | ⏳ 计划 |
+| **结果** | ❌ LightGBM RevCap@1%=44.97% < Ridge 52.60%（-14.5%） |
+
+**失败原因**：
+- 98.5% 样本 target=0，树模型倾向预测众数（0）
+- Best iteration=1，模型立即触发 early stopping
+- 树模型的阶跃函数预测在排序任务上劣于线性模型的平滑预测
 
 ---
 
@@ -169,8 +177,9 @@ Gate-1：✅ 已通过 - Two-Stage RevCap@1% = 44.42% > Direct 37.73%
 | MVP | 结论 | 关键指标 | 状态 |
 |-----|------|---------|------|
 | **1.0** | Day-Frozen Baseline | RevCap@1%=37.73% (Direct log Y) | ✅ 完成 |
-| **1.1** | Whale-only 策略 | RevCap@1%=43.60% (+36.2%) | ✅ 完成 |
-| **1.2** | **Raw Y vs Log Y** | **RevCap@1%=52.68% (+39.6%)** | ✅ 完成 |
+| **1.1** | Whale-only 策略 | RevCap@1%=43.60% → 39.48% (raw Y) | ✅ 完成 |
+| **1.2** | **Raw Y vs Log Y** | **RevCap@1%=52.60% (+39.6%)** | ✅ 完成 |
+| **2.0** | LightGBM + raw Y | RevCap@1%=44.97% (-14.5%) | ❌ 失败 |
 
 ## 4.2 时间线
 
@@ -179,10 +188,12 @@ Gate-1：✅ 已通过 - Two-Stage RevCap@1% = 44.42% > Direct 37.73%
 | 2026-01-18 | 创建 Day-Frozen 无泄漏框架 | 解决数据泄漏问题 |
 | 2026-01-18 | 建立 Direct vs Two-Stage baseline | 基准 37.73% |
 | 2026-01-18 | 归档所有有泄漏的旧实验 | 24 个实验移至 archive_leaky/ |
-| 2026-01-18 | Three-Stage Whale-only 实验 | RevCap@1% = 43.60% |
-| 2026-01-18 | **Raw Y vs Log Y 实验** | **RevCap@1% = 52.68%（当前最优）** |
+| 2026-01-18 | Three-Stage Whale-only 实验 | RevCap@1% = 43.60% (log Y) |
+| 2026-01-18 | **Raw Y vs Log Y 实验** | **RevCap@1% = 52.60%（当前最优）** |
 | 2026-01-18 | Expert Review 整合 | 识别 4 个潜在问题；明确 Frozen vs Rolling 协议 trade-off |
 | 2026-01-18 | **P0-Tech 验证通过** | 3 个问题不存在（Day-Frozen 设计正确），1 个已修复（Category 编码） |
+| 2026-01-18 | **LightGBM 实验失败** | RevCap@1%=44.97%（-14.5%），树模型不适合稀疏数据 |
+| 2026-01-18 | **Three-Stage + raw Y 实验** | RevCap@1%=39.48%（劣于 Direct），确认 Direct + raw Y 最优 |
 
 ---
 
@@ -192,13 +203,19 @@ Gate-1：✅ 已通过 - Two-Stage RevCap@1% = 44.42% > Direct 37.73%
 
 | 模型 | Spearman | Top-1% Gift Rate | RevCap@1% | RevCap@5% | 备注 |
 |------|----------|-----------------|-----------|-----------|------|
-| **Direct raw Y (Ridge)** | 0.0608 | 11.07% | **52.60%** | 64.72% | ✅ Linear 上界 |
+| **Direct raw Y (Ridge)** | 0.0608 | 11.07% | **52.60%** | 64.72% | ✅ **当前最优** |
 | Two-Stage raw Y | 0.0110 | 11.0% | 45.66% | - | |
 | Direct log Y | 0.1061 | 24.05% | 37.73% | 59.84% | |
 | Two-Stage log Y | 0.0997 | 23.6% | 32.01% | 54.62% | |
+| **LightGBM raw Y** | 0.0504 | 11.05% | 44.97% | 52.80% | ❌ 失败 |
+| Whale-only raw Y | -0.0206 | 5.85% | 39.48% | 48.24% | ❌ 失败 |
+| Whale-only log Y | 0.0290 | 9.70% | 39.77% | 51.69% | |
 | Oracle | - | - | 99.54% | - | |
 
-> **Alpha Sweep 结论**：Ridge alpha 0.001~1000 对 RevCap 无影响（±0.02%），Linear 模型已达瓶颈
+> **关键结论**：
+> - Ridge alpha 0.001~1000 对 RevCap 无影响（±0.02%），Linear 模型已达瓶颈
+> - LightGBM 失败：树模型不适合 98.5% 为 0 的稀疏数据
+> - Three-Stage/Whale-only 失败：Direct + raw Y 已隐式学会找 whale
 
 ## 5.2 运行路径
 
@@ -213,4 +230,6 @@ Gate-1：✅ 已通过 - Two-Stage RevCap@1% = 44.42% > Direct 37.73%
 | 日期 | 变更 |
 |------|------|
 | 2026-01-18 | 创建 Day-Frozen 版本，归档所有有泄漏的旧实验 |
-| 2026-01-18 | Raw Y vs Log Y 实验：RevCap@1% = 52.68%（+39.6%） |
+| 2026-01-18 | Raw Y vs Log Y 实验：RevCap@1% = 52.60%（+39.6%） |
+| 2026-01-18 | LightGBM 实验：RevCap@1% = 44.97%（-14.5%），失败 |
+| 2026-01-18 | Three-Stage + raw Y 实验：RevCap@1% = 39.48%，确认 Direct + raw Y 最优 |
