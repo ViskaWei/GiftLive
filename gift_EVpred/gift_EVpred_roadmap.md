@@ -93,17 +93,24 @@ Gate-1：✅ 已通过 - Two-Stage RevCap@1% = 44.42% > Direct 37.73%
 | **1.1** | **Three-Stage (Whale-only)** | Gate-1 | ✅ 完成 | [Link](./exp/exp_three_stage_20260118.md) |
 | **1.2** | **Raw Y vs Log Y** | Gate-1 | **✅ 完成** | [Link](./exp/exp_raw_vs_log_20260118.md) |
 | **2.0** | **LightGBM + raw Y** | Gate-2 | **❌ 失败** | [Link](./exp/exp_lightgbm_raw_y_20260118.md) |
-| 3.0 | 模拟器 V1 | Gate-3 | ⏳ 远期 | - |
+| **3.0** | **三层指标体系设计** | - | **✅ 完成** | [Link](./exp/exp_metrics_framework_20260118.md) |
+| 3.1 | 历史观看先验特征 | - | ⏳ 待执行 | - |
+| 3.2 | 样本加权回归 | - | ⏳ 待执行 | - |
+| 4.0 | 分配 MVP | Gate-4 | ⏳ 远期 | - |
+| 5.0 | 模拟器 V1 | Gate-5 | ⏳ 远期 | - |
 
 ## 2.2 下一步优先级
 
-| 优先级 | 任务 | 预期收益 | 备注 |
-|--------|------|----------|------|
+| 优先级 | 任务 | 预期收益 | 验收标准 |
+|--------|------|----------|----------|
 | ~~🔴 P0-Tech~~ | ~~修复 data_utils.py~~ | ✅ **已验证通过** | 3 个问题不存在，1 个已修复 |
 | ~~🔴 P0-Model~~ | ~~LightGBM + raw Y~~ | ❌ **失败**（-14.5%） | 树模型不适合稀疏数据 |
-| 🔴 P0-Feature | 历史观看先验特征 | 替代 watch_live_time | user/pair 历史平均观看时长 |
-| 🟡 P1 | 针对 whale 的特征 | 更好区分大额打赏者 | 历史大额打赏次数/金额 |
-| 🟢 P2 | 尝试 MLP | 神经网络可能比树更适合 | 待验证 |
+| 🔴 **P0-Feature** | 历史观看先验特征 | 替代 watch_live_time | RevCap > 54% |
+| 🔴 **P0-Metrics** | 三层指标体系标准化 | 统一评估口径 | 所有实验使用 |
+| 🟡 **P1-Tail** | 样本加权回归 `w_i=(1+y_i)^α` | 头部捕获↑ | RevCap > 55% |
+| 🟡 P1-Whale | 针对 whale 的特征 | 更好区分大额打赏者 | RevCap > 54% |
+| 🟢 P2-Model | 尝试 MLP | 非线性（比树更适合稀疏） | RevCap > 55% |
+| 🟢 **P3-Alloc** | 分配 MVP | 贪心 vs 凹收益贪心 | 总收益+Gini 对比 |
 
 ---
 
