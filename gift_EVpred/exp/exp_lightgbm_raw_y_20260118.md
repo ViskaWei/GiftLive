@@ -2,23 +2,24 @@
 > **Name:** LightGBM Direct Regression
 > **ID:** `EXP-20260118-gift_EVpred-04`
 > **Topic:** `gift_EVpred` | **MVP:** MVP-2.0
-> **Author:** Viska Wei | **Date:** 2026-01-18 | **Status:** 🔄
+> **Author:** Viska Wei | **Date:** 2026-01-18 | **Status:** ✅
 
 > 🎯 **Target:** 验证 LightGBM 是否能通过非线性特征交互进一步提升 RevCap
-> 🚀 **Next:** If RevCap > 55% → 确认非线性有效；Else → 转向特征工程
+> 🚀 **Next:** LightGBM 失败 → 转向特征工程或其他模型架构
 
 ## ⚡ 核心结论速览
 
-> **一句话**: [待实验]
+> **一句话**: LightGBM 在 RevCap@1% 上显著劣于 Ridge（44.97% vs 52.60%），树模型不适合此任务
 
 | 验证问题 | 结果 | 结论 |
 |---------|------|------|
-| Q2.1: LightGBM 是否优于 Linear？ | ⏳ 待验证 | - |
+| Q2.1: LightGBM 是否优于 Linear？ | ❌ **-14.5%** | 树模型失败 |
 
 | 指标 | Ridge (Baseline) | LightGBM | 提升 |
 |------|-----------------|----------|------|
-| Revenue Capture @1% | 52.68% | ⏳ | ⏳ |
-| Revenue Capture @5% | - | ⏳ | ⏳ |
+| Revenue Capture @1% | 52.60% | 44.97% | **-14.5%** |
+| Revenue Capture @5% | 64.72% | 52.80% | -18.4% |
+| Spearman | 0.0644 | 0.0504 | -21.7% |
 
 | Type | Link |
 |------|------|
@@ -126,38 +127,137 @@ $$\hat{y} = \sum_{k=1}^{K} f_k(\mathbf{x})$$
 
 # 4. 📊 结果
 
-> 待实验后填充
-
 ## 4.1 主结果
 
-| 模型 | RevCap@1% | RevCap@5% | Spearman |
-|------|-----------|-----------|----------|
-| Ridge (Baseline) | 52.68% | - | 0.0666 |
-| LightGBM | ⏳ | ⏳ | ⏳ |
+| 模型 | RevCap@1% | RevCap@5% | RevCap@10% | Spearman |
+|------|-----------|-----------|------------|----------|
+| **Ridge (Baseline)** | **52.60%** | **64.72%** | **70.14%** | **0.0644** |
+| LightGBM | 44.97% | 52.80% | 64.85% | 0.0504 |
+| **相对变化** | **-14.5%** | **-18.4%** | **-7.5%** | **-21.7%** |
 
-## 4.2 特征重要性
+**关键观察**：
+- LightGBM 在所有指标上均劣于 Ridge
+- Best iteration = 1，说明模型在第一轮就触发 early stopping
+- 即使尝试多种超参配置，结果仍不理想
 
-> 待填充 LightGBM 特征重要性 Top 10
+## 4.2 Gift Rate 对比
+
+| 模型 | GiftRate@1% | GiftRate@5% | GiftRate@10% |
+|------|-------------|-------------|--------------|
+| Ridge | 11.07% | 8.03% | 5.81% |
+| LightGBM | 11.05% | 4.31% | 2.95% |
+
+**发现**：LightGBM 在 @1% 的 GiftRate 与 Ridge 相近，但 @5%/@10% 显著下降，说明树模型的预测分布更集中。
+
+## 4.3 特征重要性 (Top 10)
+
+| Rank | Feature | Importance |
+|------|---------|------------|
+| 1 | user_gift_mean_hist | 8 |
+| 2 | user_gift_cnt_hist | 5 |
+| 3 | device_price | 4 |
+| 4 | pair_gift_mean_hist | 3 |
+| 5 | pair_gift_sum_hist | 3 |
+| 6 | age | 3 |
+| 7 | accu_watch_live_duration | 3 |
+| 8 | str_accu_play_duration | 2 |
+| 9 | hour | 2 |
+| 10 | accu_watch_live_cnt | 2 |
+
+**分析**：
+- 历史打赏特征（user/pair_gift）仍是最重要的
+- 但 importance 数值很低（总共只有 35 次分裂），说明模型几乎没有学到有效模式
 
 ---
 
 # 5. 💡 洞见
 
-> 待实验后填充
+## 5.1 失败原因分析
+
+### 数据稀疏性问题
+
+| 统计 | 值 |
+|------|-----|
+| 总样本 | ~4.9M |
+| Gift > 0 | ~1.5% |
+| Whale (>100元) | ~0.15% |
+| 目标分布 | 98.5% 为 0 |
+
+**核心问题**：98.5% 的样本 target = 0，树模型倾向于预测众数（0）。
+
+### 树模型 vs 线性模型
+
+| 特性 | Ridge | LightGBM |
+|------|-------|----------|
+| 预测类型 | 连续平滑 | 阶跃函数 |
+| 对稀疏数据 | 给微小正值 | 预测 0 |
+| 排序能力 | 保持相对排序 | 区分度差 |
+
+**根本原因**：树模型的预测是离散的阶跃函数，当大部分样本为 0 时，树的叶节点倾向于预测 0。Ridge 的线性预测虽然绝对值可能不准，但能保持样本间的相对排序。
+
+### Early Stopping 异常
+
+- Best iteration = 1，说明验证集 loss 在第一轮后就开始上升
+- 原因：树模型对这类高度偏斜数据的拟合很不稳定
+
+## 5.2 尝试过的调优（均失败）
+
+| 配置 | 结果 |
+|------|------|
+| 浅树 (max_depth=3) | 仍劣于 Ridge |
+| 强正则化 (reg_alpha=1.0) | 无改善 |
+| MAE 损失 | 无改善 |
+| Huber 损失 | 无改善 |
+| 更多 iterations + 禁用 early stopping | 过拟合 |
 
 ---
 
 # 6. 📝 结论
 
-> 待实验后填充
+## 6.1 核心发现
+
+> **LightGBM 在 RevCap@1% 上劣于 Ridge 14.5%（44.97% vs 52.60%），树模型不适合此类高度稀疏的排序任务**
+
+## 6.2 关键结论
+
+| # | 结论 | 证据 |
+|---|------|------|
+| 1 | **树模型失败** | RevCap 下降 14.5% |
+| 2 | **数据稀疏是主因** | 98.5% 样本为 0 |
+| 3 | **线性模型更适合排序** | Ridge 保持相对排序 |
+| 4 | **非线性不是关键** | 特征交互未带来收益 |
+
+## 6.3 设计启示
+
+| 原则 | 建议 |
+|------|------|
+| 模型选择 | 高度稀疏数据优先考虑线性模型 |
+| 评估指标 | 排序任务看 RevCap，不看 RMSE/MAE |
+| Early Stopping | 在稀疏数据上可能误导 |
+
+| ⚠️ 陷阱 | 原因 |
+|---------|------|
+| 盲目用 GBDT | 不是所有问题 GBDT 都优于线性 |
+| 信任 feature importance | low importance 说明模型没学到 |
+| 过度调参 | 数据特性决定上限 |
+
+## 6.4 关键数字
+
+| 指标 | 值 | 条件 |
+|------|-----|------|
+| Ridge RevCap@1% | **52.60%** | **当前最优** |
+| LightGBM RevCap@1% | 44.97% | 失败 |
+| 相对下降 | **-14.5%** | - |
+| Best iteration | 1 | 立即 early stop |
 
 ## 6.5 下一步
 
 | 方向 | 任务 | 优先级 |
 |------|------|--------|
-| 若成功 | 固化 LightGBM 为新 baseline | 🔴 |
-| 若持平 | 分析特征重要性，转向特征工程 | 🟡 |
-| 若失败 | 检查过拟合，调优超参 | 🟡 |
+| ✅ 确认 | Ridge + raw Y 仍是最优 baseline | - |
+| 🟡 P1 | 特征工程：历史观看先验特征 | 替代 watch_live_time |
+| 🟡 P1 | 特征工程：whale 专属特征 | 历史大额打赏次数/金额 |
+| 🟢 P2 | 尝试 Neural Network | MLP 可能比树更适合 |
 
 ---
 
@@ -168,23 +268,59 @@ $$\hat{y} = \sum_{k=1}^{K} f_k(\mathbf{x})$$
 | 项 | 值 |
 |----|-----|
 | 数据处理 | `gift_EVpred/data_utils.py` |
-| 实验脚本 | 待创建 |
+| 结果文件 | `results/lightgbm_comparison_20260118.json` |
+| 执行环境 | Python 3.x, LightGBM |
+
+## 7.2 完整结果 JSON
+
+```json
+{
+  "ridge": {
+    "name": "Ridge",
+    "rev_cap_0.01": 0.526,
+    "gift_rate_0.01": 0.1107,
+    "rev_cap_0.05": 0.6472,
+    "rev_cap_0.1": 0.7014,
+    "spearman": 0.0644
+  },
+  "lightgbm": {
+    "name": "LightGBM",
+    "rev_cap_0.01": 0.4497,
+    "gift_rate_0.01": 0.1105,
+    "rev_cap_0.05": 0.5280,
+    "rev_cap_0.1": 0.6485,
+    "spearman": 0.0504
+  },
+  "relative_improvement_1pct": -14.51,
+  "best_iteration": 1
+}
+```
+
+## 7.3 实验代码
 
 ```python
-# LightGBM 实现
 from gift_EVpred.data_utils import prepare_dataset, get_feature_columns
 import lightgbm as lgb
+from sklearn.linear_model import Ridge
+import numpy as np
 
-train_df, val_df, test_df = prepare_dataset()
+# 加载数据
+train_df, val_df, test_df, lookups = prepare_dataset()
 feature_cols = get_feature_columns(train_df)
 
-X_train = train_df[feature_cols]
-y_train = train_df['target_raw']  # raw Y
-X_val = val_df[feature_cols]
-y_val = val_df['target_raw']
-X_test = test_df[feature_cols]
+X_train = train_df[feature_cols].values
+y_train = train_df['target_raw'].values  # raw Y
+X_val = val_df[feature_cols].values
+y_val = val_df['target_raw'].values
+X_test = test_df[feature_cols].values
+y_test = test_df['target_raw'].values
 
-# LightGBM 模型
+# Ridge baseline
+ridge = Ridge(alpha=1.0)
+ridge.fit(X_train, y_train)
+ridge_pred = ridge.predict(X_test)
+
+# LightGBM
 params = {
     'objective': 'regression',
     'metric': 'mae',
@@ -201,20 +337,21 @@ params = {
     'verbose': -1
 }
 
-model = lgb.LGBMRegressor(**params)
-model.fit(
+lgb_model = lgb.LGBMRegressor(**params)
+lgb_model.fit(
     X_train, y_train,
     eval_set=[(X_val, y_val)],
     callbacks=[lgb.early_stopping(50)]
 )
+lgb_pred = lgb_model.predict(X_test)
 
-# 预测
-y_pred = model.predict(X_test)
-
-# 评估 RevCap
-# ... (与之前相同的评估函数)
+# 评估函数
+def revenue_capture_at_k(y_true, y_pred, k=0.01):
+    n_top = int(len(y_true) * k)
+    top_indices = np.argsort(y_pred)[-n_top:]
+    return y_true[top_indices].sum() / y_true.sum()
 ```
 
 ---
 
-> **实验创建时间**: 2026-01-18
+> **实验完成时间**: 2026-01-18

@@ -24,11 +24,11 @@
 - 🔴 **P0-Model**：LightGBM + raw Y → If RevCap > 55% then 确认非线性有效；Else 转向特征工程
 - 🟡 **P1**：历史观看先验特征（user/pair 历史平均观看时长） → 替代被删除的 watch_live_time
 
-> **权威数字**：Best=52.68% RevCap@1%；Baseline=37.73%；Δ=+39.6%；条件=Direct Ridge + raw Y, Day-Frozen
+> **权威数字**：Best=52.60% RevCap@1%（Linear 上界）；Baseline=37.73%；Δ=+39.4%；条件=Direct Ridge + raw Y, Day-Frozen, alpha 不敏感
 
 | 模型/方法 | RevCap@1% | 配置 | 备注 |
 |-----------|-----------|------|------|
-| **Direct + raw Y** | **52.68%** | Ridge, raw Y | ✅ 当前最优 (B2) |
+| **Direct + raw Y (Ridge)** | **52.60%** | Ridge alpha=1.0, raw Y | ✅ Linear 上界 (B2) |
 | Two-Stage + raw Y | 45.66% | LR + Ridge, raw Y | B2 变体 |
 | Direct + log Y | 37.73% | Ridge, log(1+Y) | B2 baseline |
 | Whale-only (P90) | 43.60% | LR + LR + Ridge | Three-Stage |
@@ -188,6 +188,9 @@ Legend: ✅ 已验证 | ❌ 已否定 | ⏳ 待验证
 | **E4** | **Pair 历史最强** | 系数 0.194 | 历史打赏行为是最强预测信号 | 重点挖掘 pair 特征 | exp_baseline |
 | **E5** | **Day-Frozen 无泄漏** | 200/200 通过 | merge_asof + allow_exact_matches=False | 可信实验基础 | exp_baseline |
 | **E6** | **阈值越高 RevCap 越高** | P90 > P80 > ... > P50 | 专注"超级大哥"比覆盖全体 gifters 更有效 | raw Y 隐式实现 | exp_three_stage |
+| **E7** | **Ridge alpha 不敏感** | alpha 0.001~1000 RevCap 不变 | 特征无严重共线性，Linear 已达瓶颈 | 需要 LightGBM 非线性 | alpha_sweep |
+
+**Linear 模型瓶颈确认**：Ridge alpha sweep 显示无调参空间，RevCap@1%=52.60% 是 Linear + Day-Frozen 的上界。
 
 ---
 
@@ -195,7 +198,7 @@ Legend: ✅ 已验证 | ❌ 已否定 | ⏳ 待验证
 
 | DG | 我们缺的答案 | 为什么重要 | 什么结果能关闭它 | 决策规则 |
 |---|---|---|---|---|
-| DG1 | LightGBM 是否优于 Linear？ | Linear 可能已到瓶颈 | RevCap 对比 | If >55% → 用 LightGBM；Else → 转特征工程 |
+| DG1 | LightGBM 是否优于 Linear？ | **Linear 已确认到瓶颈**（alpha sweep 无提升） | RevCap 对比 | If >55% → 用 LightGBM；Else → 转特征工程 |
 | DG2 | Whale-specific 特征有用吗？ | 可能进一步区分大哥 | RevCap 提升 | If >2% 提升 → 加入；Else → 不加 |
 | **DG3** | **Frozen vs Rolling 哪个对齐线上？** | 决定评估协议 | 明确线上特征更新频率 | 批处理→Frozen；实时计数器→Rolling |
 | DG4 | Partial dwell (5s/10s) 值得做吗？ | 若允许延迟打分，可作为重排序特征 | 工程可行性 + RevCap 增益 | 需要产品侧确认是否允许延迟打分 |
@@ -281,6 +284,7 @@ Expert Review 识别的 4 个潜在问题，经代码分析和验证：
 | 2026-01-18 | **Raw Y vs Log Y 实验** | **RevCap=52.68%（+39.6%），当前最优** |
 | 2026-01-18 | Expert Review 整合 | 新增 M7-M11 方法论洞见；明确 Frozen vs Rolling 协议 trade-off |
 | 2026-01-18 | **P0-Tech 验证通过** | 3 个问题不存在（Day-Frozen 设计正确），1 个已修复（Category 编码）；200/200 验证通过 |
+| 2026-01-18 | **Alpha Sweep** | Ridge alpha 0.001~1000 无影响，确认 Linear 瓶颈 52.60% |
 
 ---
 

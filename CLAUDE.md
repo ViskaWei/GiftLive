@@ -33,11 +33,42 @@ source init.sh
 | `design` 或 `设计原则` 或 `原则` | `.claude/skills/research-design-principles.md` | 提取设计原则 |
 | `merge [关键词]` 或 `合并 [关键词]` | `.claude/skills/research-merge.md` | 合并实验 |
 | `grow [new_topic] [parent_topic]` 或 `生长` | `.claude/skills/research-grow-topic.md` | 子节点生长 |
+| `git` 或 `sync` 或 `提交` | 内置命令 | Git pull + add + commit + push |
 
 **执行流程**：
 1. 识别触发词 → 读取对应 skill 文件
 2. 按 skill 文件中的 Workflow 步骤执行
 3. 输出格式遵循 skill 文件中的 Output Format
+
+---
+
+## 🔄 Git 快捷命令（`git` / `sync` / `提交`）
+
+当用户输入 `git`、`sync` 或 `提交` 时，执行以下流程：
+
+```bash
+# 1. 先 pull 最新代码
+git pull --rebase
+
+# 2. 查看状态
+git status
+
+# 3. 添加所有更改
+git add -A
+
+# 4. 生成 commit message（基于 diff 自动总结）
+git commit -m "自动生成的 commit message
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+
+# 5. Push 到远程
+git push
+```
+
+**Commit Message 规则**：
+- 自动根据 `git diff --staged` 生成简洁摘要
+- 格式：`<type>: <description>`
+- 类型：`feat` / `fix` / `docs` / `refactor` / `exp` (实验相关)
 
 ---
 
