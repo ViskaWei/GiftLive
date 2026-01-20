@@ -120,6 +120,19 @@ img { max-width: 600px; width: 33.33%; height: auto; display: block; margin: 10p
 
 def render_markdown(content, base_path):
     """Render markdown and fix relative image paths."""
+    
+    # Step 0: Remove HTML comments (they shouldn't appear in output)
+    content = re.sub(r'<!--.*?-->', '', content, flags=re.DOTALL)
+    
+    # Step 1: Wrap LaTeX in HTML tags so markdown won't process them
+    # Display math: $$...$$ (single line) -> <div class="math">$$...$$</div>
+    content = re.sub(r'^(\$\$[^\n]+\$\$)$', r'<div class="math">\1</div>', content, flags=re.MULTILINE)
+    
+    # Display math: $$\n...\n$$ (multiline) -> <div class="math">...</div>
+    def wrap_multiline_math(match):
+        return f'<div class="math">{match.group(0)}</div>'
+    content = re.sub(r'\$\$\s*\n.*?\n\s*\$\$', wrap_multiline_math, content, flags=re.DOTALL)
+    
     md = markdown.Markdown(extensions=[
         CodeHiliteExtension(css_class='codehilite', guess_lang=True, linenums=False),
         FencedCodeExtension(),

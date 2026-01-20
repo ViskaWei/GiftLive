@@ -96,6 +96,7 @@ Gate：把分配问题当成"带约束、带外部性、带风险"的在线资�
 | MVP | 名称 | Phase | Gate | 状态 | exp_id | 报告 |
 |-----|------|-------|------|------|--------|------|
 | 0.1-Enhanced | 全方位 EDA (Comprehensive) | 0 | - | 🔄 | EXP-20260109-kuailive-02 | [已迁移至 KuaiLive](../KuaiLive/exp/exp_kuailive_eda_comprehensive_20260109.md) |
+| 4.3 | Simulator V3（可选：时序+忠诚度） | 4 | - | ⏳ P2 | - | 见 [exp_simulator_v2](exp/exp_simulator_v2_20260109.md) §5.4 |
 | 5.1 | 召回-精排分工 | 5 | Gate-5A | ❌ FAIL | EXP-20260109-gift-allocation-51 | [exp_recall_rerank_20260109.md](exp/exp_recall_rerank_20260109.md) |
 | 5.2 | 影子价格/供需匹配 | 5 | Gate-5B | ❌ FAIL | EXP-20260109-gift-allocation-16 | [exp_shadow_price_20260109.md](exp/exp_shadow_price_20260109.md) |
 | 5.3 | 鲸鱼分散 (b-matching) | 5 | Gate-5C | ⏳ | EXP-20260109-gift-allocation-53 | [exp_whale_matching_20260109.md](exp/exp_whale_matching_20260109.md) |
@@ -141,6 +142,32 @@ Gate：把分配问题当成"带约束、带外部性、带风险"的在线资�
 - H2.5: 数据是否存在异常/作弊/污染？
 
 **图表生成任务**: 28 个任务（至少 12 个 P0 优先级），详见实验报告 §10.3
+
+---
+
+### MVP-4.3: Simulator V3（可选：时序+忠诚度）
+
+| 项 | 配置 |
+|----|------|
+| **目标** | 修复 V2+ 与真实数据剩余差距（时序、忠诚度、Gini） |
+| **动机** | V2+ 对策略相对比较已足够，但如需精确模拟真实数据则需 V3 |
+| **差距分析** | 见 [exp_simulator_v2](exp/exp_simulator_v2_20260109.md) §5.4 |
+| **优先级** | 🟢 P2 可选 |
+
+**V3 核心机制**：
+
+| # | 机制 | 真实数据特征 | 实现思路 |
+|---|------|--------------|----------|
+| 1 | 时序冲动模型 | 90% 打赏在前 10% session 时间 | 打赏概率 ∝ decay(session_progress) |
+| 2 | 用户忠诚度 | gift_loyalty P50=100% | user→streamer 偏好向量，历史主播概率更高 |
+| 3 | 用户分群 | 17.6% 高看低付 | 标记群体，设置不同转化概率 |
+| 4 | 主播分群 | 18.2% 高引低变 | 标记群体，设置不同变现率 |
+| 5 | 极端稀疏性 | 92.2% 主播无收入 | new_streamer_ratio → 90%+ |
+
+**验收标准**：
+- User Gini 误差 <3% (当前 5.7%)
+- P99 误差 <20% (当前 33%)
+- 忠诚度分布匹配
 
 ---
 

@@ -44,6 +44,9 @@
 | K11 | **✅ 1 分钟窗口足够**：98.2% gift 在 click 同毫秒内发生，1min 窗口覆盖 92.6% | Coverage 分析 | 默认 1min，减少归因噪声 |
 | K12 | **✅ Strict 模式无泄漏**：drop 快照特征（fans/accu_*），仅用真正静态+历史特征 | KuaiLive 快照是 May 25 | 默认 Strict，Benchmark 可选 |
 | K13 | **⚠️ 首次打赏预测弱**：56% 收入来自无历史 pair，但 RevCap 只有 29.6% | 模型依赖复购信号 | 需优化 user/str 级特征 |
+| K14 | **❌ 留存不可预测**：AUC=0.57（接近随机），当前特征无法预测次日留存 | 留存由隐性因素决定 | 放弃作为预测目标 |
+| K15 | **🔥 打赏损害留存**：打赏用户留存 78.9% vs 未打赏 89.2%（-10.3pp） | "满足后离开"效应 | 短期收益 ≠ 长期价值 |
+| K16 | **✅ 收入极度集中**：Gini=0.926，Top 1% 主播占 93.7% 收入 | 头部吸金效应 | 分配层需生态约束 |
 
 **🦾 现阶段信念**
 - **Direct + raw Y (Ridge) 是当前最优方案** → RevCap@1%=51.4%（Strict Mode），CV=9.4%
@@ -52,13 +55,14 @@
 - **Frozen 特征已够用**，Rolling 是后续迭代方向 → 当前不增加复杂度
 - **✅ data_utils.py Final 版本** → Last-Touch + gift_id 去重 + 1min 窗口 + Strict 模式
 
-**👣 下一步最有价值**（2026-01-19）
+**👣 下一步最有价值**（2026-01-19 更新）
+
+> 📢 **清理归档**：旧实验（一个 gift 归因多个 click）已移至 `archive_last_touch/`，需用正确数据重跑
 
 | 优先级 | 任务 | 验收标准 | 状态 |
 |--------|------|----------|------|
-| 🔴 **P0** | **预测目标扩展** | 留存 AUC > 0.6 | ⏳ 新立项 |
-| 🔴 P0 | 历史观看先验特征 | RevCap > 54% | ⏳ |
-| 🟡 P1 | 样本加权回归 | RevCap > 55% | ⏳ |
+| 🔴 **P0** | **重跑 Two-Stage (Last-Touch 数据)** | RevCap 对比 | 🔄 待重做 |
+| 🔴 **P0** | **重跑 LightGBM (Last-Touch 数据)** | RevCap 对比 | 🔄 待重做 |
 | 🟡 P1 | Whale 专属特征 | RevCap > 54% | 待立项 |
 | 🟢 P2 | 尝试 MLP | RevCap > 55% | 待立项 |
 | 🟢 P3 | 分配 MVP | 贪心 vs 凹收益贪心 | 待立项 |
@@ -76,21 +80,37 @@
 | 指标 | 值 | 说明 |
 |------|-----|------|
 | **RevCap@1%** | **51.4%** | Top 1% 预测捕获 51.4% 收入 |
+| **Normalized RevCap@1%** | **51.6%** | vs Oracle 上界（99.5%） |
 | **CV (稳定性)** | **9.4%** | 首次 <10% 阈值 |
 | **95% CI** | [47.2%, 54.4%] | Bootstrap 置信区间 |
 | Whale Recall@1% | 34.6% | 召回 34.6% 的大额打赏 |
 | Whale Precision@1% | 5.0% | Top 1% 中 5% 是大额打赏 |
+| Avg Revenue@1% | 78.2 元 | Top 1% 人均打赏金额 |
+| Gift Rate@1% | ~35% | Top 1% 中有打赏的比例 |
 
-### RevCap 曲线
+### RevCap@K 曲线（RevShare@K）
 
-| Top K% | RevCap |
-|--------|--------|
-| 0.1% | 21.2% |
-| 0.5% | 43.3% |
-| **1%** | **51.4%** |
-| 2% | 56.3% |
-| 5% | 63.6% |
-| 10% | 68.6% |
+| Top K% | RevCap | Oracle | Normalized | Whale Recall |
+|--------|--------|--------|------------|--------------|
+| **0.1%** | **21.2%** | 83.9% | 25.3% | 9.9% |
+| **0.5%** | **43.3%** | 98.3% | 44.1% | 26.6% |
+| **1%** | **51.4%** | 99.5% | 51.6% | 34.6% |
+| **2%** | **56.3%** | 100% | 56.3% | 42.1% |
+| **5%** | **63.6%** | 100% | 63.6% | 52.7% |
+| **10%** | **68.6%** | 100% | 68.6% | 61.7% |
+
+> **解读**：@2% 时 Oracle 已达 100%，说明全部收入集中在 Top 2% 样本中
+
+### 生态指标（分配层护栏）
+
+| 指标 | 值 | 说明 |
+|------|-----|------|
+| **Streamer Gini** | **0.926** | 收入极度集中 |
+| Top 1% 主播收入占比 | 93.7% | 头部吸金效应 |
+| Top 10% 主播收入占比 | ~99% | 长尾主播几乎无收入 |
+| 打赏用户留存 | 78.9% | 比未打赏用户低 10.3pp |
+
+> **警示**：若分配层不加约束，可能加剧马太效应
 
 ### 模型配置
 
@@ -328,10 +348,10 @@ curve = compute_revcap_curve(y_true, y_pred, ks=[0.001, 0.005, 0.01, 0.02, 0.05,
     ├── Q2.1: LightGBM 替代 Linear？ → ❌ 失败（-3.1%~-14.5%），Tree 不适合稀疏回归
     ├── Q2.2: Whale-specific 特征？ → ⏳ 待验证
     ├── Q2.3: Rolling 特征？ → ⏳ 后续迭代
-    └── **Q2.4: 预测目标扩展？ → ⏳ 新立项**
-        ├── Q2.4.1: 用户留存可预测？ → ⏳ return_1d / return_7d
-        ├── Q2.4.2: 短期收益 vs 留存权衡？ → ⏳
-        └── Q2.4.3: 生态约束如何建模？ → ⏳ Gini / tail_coverage
+    └── **Q2.4: 预测目标扩展？ → ✅ 已验证（部分成功）**
+        ├── Q2.4.1: 用户留存可预测？ → ❌ AUC=0.57（接近随机）
+        ├── Q2.4.2: 短期收益 vs 留存权衡？ → ✅ 发现负相关（打赏用户留存低 10.3pp）
+        └── Q2.4.3: 生态约束如何建模？ → ✅ Gini=0.93（极度集中），作为分配约束
 
 Legend: ✅ 已验证 | ❌ 已否定 | ⏳ 待验证
 ```
@@ -430,6 +450,11 @@ feature_cols = get_feature_columns(train_df)   # 20 个特征
 | **E13** | **✅ 快照特征贡献低** | Strict (20特征) vs Benchmark (31特征) RevCap 完全相同 | 11 个快照特征只占 22.6% 系数权重，Top5 全是历史打赏特征 | 安心使用 Strict 模式，无需担心损失预测能力 | exp_strict_vs_benchmark |
 | **E14** | **✅ pair_hist 无泄漏但极重要** | 去掉 pair_* 后 RevCap -12.9pp，CV +17.2pp | Day-Frozen 严格 `day < click_day`，10/10 验证通过 | 合理信号，不是泄漏 | card_pair_hist_analysis |
 | **E15** | **⚠️ 首次打赏预测能力弱** | 56% 收入来自首次打赏，但 RevCap 只有 29.6% | 模型过度依赖复购信号，cold-start 场景能力不足 | 需优化 user/streamer 级特征 | card_pair_hist_analysis |
+| **E16** | **❌ 留存难以预测** | AUC=0.5722（接近随机） | 当前特征无法有效预测用户次日留存 | 放弃作为预测目标，改为观测指标 | exp_prediction_target_expansion |
+| **E17** | **🔥 打赏与留存负相关** | 打赏用户留存 78.9% vs 未打赏 89.2%（-10.3pp） | "满足后离开"效应 或 偶发性访问 | 短期收益 ≠ 长期价值，分配策略需权衡 | exp_prediction_target_expansion |
+| **E18** | **✅ 收入极度集中** | Gini=0.926，Top 1% 主播占 93.7% 收入 | 头部主播吸金效应 | 分配层需添加生态约束（凹收益函数） | exp_prediction_target_expansion |
+| **E19** | **❌ 样本加权无效** | α=0 最优，α>0 性能下降 | 等权已足够捕获头部信号，加权过拟合 | 保持等权回归，不用样本加权 | exp_weighted_regression |
+| **E20** | **⚠️ 历史观看先验无增益** | RevCap@1% +0.01pp，系数差 48 倍 | 礼物历史已饱和，观看被打赏隐含 | 不加入观看特征，专注打赏历史挖掘 | exp_watch_history_prior |
 
 **Linear 模型瓶颈确认**：Ridge alpha sweep 显示无调参空间，RevCap@1%=51.0%（修复后）是 Linear + Day-Frozen 的上界。LightGBM 无法突破此瓶颈（Tree 不适合稀疏回归）。
 
@@ -496,6 +521,9 @@ feature_cols = get_feature_columns(train_df)   # 20 个特征
 | P9 | Rolling 优于 Frozen（若线上有实时特征） | 更精确的历史 | DG3 决策后 |
 | P10 | Multi-task (EV + is_gift) | 用密集信号扶起稀疏打赏 | 后续迭代 |
 | P11 | MLP 可能优于 Linear | NN 可能比 Tree 更适合稀疏数据 | DG5 验证 |
+| **P12** | **留存作为观测，不作为预测目标** | AUC=0.57 难以预测 | exp_prediction_target_expansion |
+| **P13** | **留存模型只能当护栏** | 无 propensity/探索桶，无法做 IPS 校正 | session/retention.md |
+| **P14** | **生态用约束，不用监督学习** | Gini 是全局指标，非逐条标签 | exp_prediction_target_expansion |
 
 ### 7.3 已关闭方向
 
@@ -534,18 +562,12 @@ Expert Review 识别的 4 个潜在问题，经代码分析和验证：
 | 📊 **Metrics** | `metrics.py` | 统一评估模块 |
 | 📊 **Final Result** | `results/baseline_ridge_final_20260119.json` | **权威数字来源** |
 
-### 实验报告（按时间倒序）
+### 实验报告（当前有效）
 
 | 日期 | 报告 | 结论 |
 |------|------|------|
-| 01-19 | `exp/exp_strict_vs_benchmark_20260119.md` | ✅ 快照特征贡献低，Strict 足够 |
-| 01-19 | `exp/exp_label_window_analysis_20260119.md` | ✅ 1min 窗口覆盖 92.6% |
-| 01-19 | `exp/exp_baseline_ridge_20260119.md` | ✅ **Final Baseline: 51.4%** |
-| 01-19 | `exp/exp_metrics_landing_20260119.md` | ✅ 指标体系落地 |
-| 01-18 | `exp/exp_lightgbm_raw_y_20260118.md` | ❌ LightGBM 失败 |
-| 01-18 | `exp/exp_raw_vs_log_20260118.md` | ✅ raw Y >> log Y |
-| 01-18 | `exp/exp_three_stage_20260118.md` | ❌ Three-Stage 失败 |
-| 01-18 | `exp/exp_baseline_day_frozen_20260118.md` | ✅ Day-Frozen 框架 |
+| 01-19 | `exp/exp_baseline_ridge_20260119.md` | ✅ **Final Baseline: 51.4%** (Last-Touch 归因) |
+| 01-19 | `exp/exp_metrics_20260119.md` | ✅ **Metrics v2.1 指标体系完整手册** |
 
 ### 知识卡片
 
@@ -557,18 +579,12 @@ Expert Review 识别的 4 个潜在问题，经代码分析和验证：
 | `card/card_label_duplicate.md` | Over-Attribution 修复 |
 | `card/card_pair_hist_analysis.md` | pair_hist 无泄漏验证 |
 
-### 待执行
-
-| 报告 | 状态 |
-|------|------|
-| `exp/exp_watch_history_prior_20260119.md` | ⏳ |
-| `exp/exp_weighted_regression_20260119.md` | ⏳ |
-
 ### 归档
 
 | 路径 | 说明 |
 |------|------|
 | `exp/archive_leaky/` | 有泄漏的旧实验（勿参考） |
+| `exp/archive_last_touch/` | Last-Touch 前的旧实验（一个 gift 归因多个 click） |
 
 ---
 
@@ -599,53 +615,101 @@ Expert Review 识别的 4 个潜在问题，经代码分析和验证：
 | 2026-01-19 | **🔑 pair_hist 深度分析** | 验证无泄漏（10/10 通过）；去掉后 RevCap -12.9pp；发现首次打赏问题（56% 收入但 RevCap 29.6%）；新增 E14, E15 |
 | 2026-01-19 | **📦 Final Baseline v1.0 发布** | RevCap@1%=51.4%, CV=9.4%; 20 特征 (Strict); 1min 窗口; Last-Touch; 文档整理完成 |
 | 2026-01-19 | **🔴 预测目标扩展立项** | Q2.4 新增；从"预测 gift"扩展到"预测行动后果"（短期收益 + 留存 + 生态） |
+| 2026-01-19 | **🔑 预测目标扩展完成** | 留存 AUC=0.57（❌ 不可预测）；发现打赏与留存负相关（-10.3pp）；收入 Gini=0.93；新增 E16-E18 |
+| 2026-01-19 | **❌ 样本加权回归实验** | α=0 最优，α>0 性能下降；α=1.0 崩溃至 24.4%；等权回归已足够；新增 E19 |
+| 2026-01-19 | **⚠️ 历史观看先验实验** | RevCap@1% +0.01pp，系数差 48 倍；观看被打赏隐含，不加入；新增 E20 |
+| 2026-01-19 | **🚀 metrics.py v2.1** | 4 个 P0 决策指标实现：Misallocation Cost / Capture AUC / PSI Drift / Diversity |
 
 ---
 
-## 10) 📐 三层指标体系（2026-01-18）
+## 10) 📐 三层指标体系（2026-01-19 更新）
 
-> 基于专家建议，建立"识别大哥 → 预测价值 → 分配"全链路统一评估口径
+> 基于专家建议，建立"预测 → 决策 → 约束 → 长期"全链路评估口径
 
-### 10.1 识别层（Find Whales / 找大哥）
+### 10.1 识别层（Find Whales / 排序质量）
 
-**主指标（North Star）**：
-- **RevCap@K**（K ∈ {0.1%, 0.5%, 1%, 2%, 5%, 10%}）：画 RevCap 曲线
-- **Normalized RevCap@K** = RevCap@K / Oracle@K
+| 指标 | 定义 | 状态 | 当前值 |
+|------|------|------|--------|
+| **RevCap@K** | Top K% 捕获收入占比 | ✅ 已实现 | @1%=51.4% |
+| **Normalized RevCap@K** | RevCap / Oracle | ✅ 已实现 | @1%=51.6% |
+| **Capture Curve AUC** | ∫₀^α RevCap(k) dk | ✅ 已实现 | - |
+| Whale Recall@K | y≥P90 的召回 | ✅ 已实现 | @1%=34.6% |
+| Whale Precision@K | TopK 里 whale 比例 | ✅ 已实现 | @1%=5.0% |
+| **Gift Rate@K** | TopK 里有打赏的比例 | ✅ 已实现 | @1%~35% |
+| Avg Revenue@K | TopK 人均打赏 | ✅ 已实现 | @1%=78.2元 |
+| NDCG@K (多 K) | 排序质量 | ⏳ 可选 | @100 待补 |
 
-**诊断指标**：
-- Whale Recall@K（y≥P90 的召回）
-- Precision@K（TopK 里 whale 比例）
-- Avg Revenue per Selected@K
-- **Stability**（按天 RevCap@1% 均值±标准差）
+> **Capture Curve AUC** 避免"只优化 1% 导致 5%/10% 崩"的过拟合
 
-> ⚠️ **评估泄漏警告**：用 Val 挑 best，Test 只做一次最终报告
+### 10.2 估值层（Predict EV / 校准与成本）
 
-### 10.2 估值层（Predict EV / 预测大哥期望赏金）
+| 指标 | 定义 | 状态 | 说明 |
+|------|------|------|------|
+| **Tail Calibration** | Sum(pred)/Sum(actual) 按桶 | ✅ 已实现 | 头部校准 |
+| **DW-ECE** | 金额加权 ECE | 🔴 待实现 | 对重尾更敏感 |
+| **Misallocation Cost** | Oracle@K - Achieved@K | ✅ 已实现 | 错分代价 |
+| **Opportunity Cost** | 稀缺大哥分错的机会成本 | ✅ 已实现 | 决策最关键 |
+| Over/Under-estimation | 高估 vs 低估比例 | ⏳ 可选 | - |
+| Probability ECE | P(gift) 概率校准 | ✅ 已实现 | 二分类校准 |
 
-**Tail Calibration（头部校准）**：
-- 按预测分桶（top 0.1%/0.5%/1%/5%），计算 `Sum(pred)/Sum(actual)`
-- 目标：top 桶不系统性偏高/偏低
+> **Misallocation Cost**：同样 RevShare@1% 的两个模型，错分代价可能差 2×
 
-**误差指标**：
-- Over/Under-estimation Ratio（分配更怕"高估"）
-- Tail MAE / Pinball Loss (Q90/Q95)
+### 10.3 稳定性与可上线性（Temporal + Drift）
 
-### 10.3 分配层（Allocation / 把大哥分给谁）
+| 指标 | 定义 | 状态 | 当前值 |
+|------|------|------|--------|
+| **Temporal Stability** | 按天 RevCap 均值±标准差 | ✅ 已实现 | CV=9.4% |
+| **95% CI** | Bootstrap 置信区间 | ✅ 已实现 | [47.2%, 54.4%] |
+| **PSI / Drift** | Train vs Test 预测分布漂移 | ✅ 已实现 | - |
+| KL Divergence | 分布漂移量化 | ✅ 已实现 | - |
+| 按小时稳定性 | 更细粒度时间波动 | ⏳ 可选 | - |
 
-**优化目标**：`max ∑_s g_s(V_s)`，边际增益 `Δ(u→s) ≈ g'(V_s) · v_{u,s}`
+> **PSI/Drift**：系统依赖历史交互特征，冷启动比例高时漂移风险大
 
-**分配指标**：
-- Total Revenue（线性）: `∑_s V_s`
-- Concave Revenue（凹收益）: `∑_s g_s(V_s)`
-- Streamer Gini / Coverage（生态）
-- Constraint Violations（约束违反率）
+### 10.4 生态护栏（Ecosystem Guardrails）
 
-### 10.4 在线护栏
+| 指标 | 定义 | 状态 | 当前值 |
+|------|------|------|--------|
+| **Streamer Gini** | 主播收入集中度 | ✅ 已实现 | 0.926 |
+| **Top10 Share** | Top 10% 主播收入占比 | ✅ 已实现 | ~99% |
+| **Tail Coverage** | 长尾主播覆盖率 | ✅ 已实现 | - |
+| **Cold Start Coverage** | 新主播覆盖率 | ✅ 已实现 | - |
+| **Diversity / Entropy** | exp(entropy(streamer_id)) | ✅ 已实现 | - |
+| Overload Rate | 高价值用户过载 | ✅ 已实现 | - |
+| **Fairness Gap** | 切片间收益差距 | 🟡 待实现 | - |
+
+> **Diversity/Entropy** 比 Gini 更灵敏，能捕捉"覆盖多但仍集中"的情况
+
+### 10.5 分配层（Allocation / OPE）
+
+| 指标 | 定义 | 状态 | 说明 |
+|------|------|------|------|
+| Total Revenue | ∑_s V_s | ⏳ Gate-3 | 线性收益 |
+| Concave Revenue | ∑_s g_s(V_s) | ⏳ Gate-3 | 凹收益 |
+| **OPE (IPS/DR)** | 反事实估计 | ⏳ Gate-3 | 需要 propensity |
+| **ESS** | 有效样本量 | ⏳ Gate-3 | 避免 OPE 幻觉 |
+| Cap Violation Rate | 主播承接上限违反 | ⏳ Gate-3 | 约束满足率 |
+| Min Exposure Sat. | 最低曝光满足率 | ⏳ Gate-3 | 公平约束 |
+
+### 10.6 指标实现状态（2026-01-19 更新）
+
+| 优先级 | 指标 | 函数名 | 状态 |
+|--------|------|--------|------|
+| ~~🔴 P0~~ | **Misallocation Cost** | `compute_misallocation_cost()` | ✅ 已实现 |
+| ~~🔴 P0~~ | **Capture Curve AUC** | `compute_capture_auc()` | ✅ 已实现 |
+| ~~🔴 P0~~ | **PSI / Drift** | `compute_drift()` | ✅ 已实现 |
+| ~~🔴 P0~~ | **Diversity / Entropy** | `compute_diversity()` | ✅ 已实现 |
+| 🟡 P1 | DW-ECE | `compute_dw_ece()` | ⏳ 待实现 |
+| 🟡 P1 | Fairness Gap | `compute_fairness_gap()` | ⏳ 待实现 |
+
+> **v2.1 更新**：4 个 P0 决策核心指标已全部实现，集成到 `evaluate_model()` 主函数
+
+### 10.7 在线护栏
 
 | 类别 | 指标 |
 |------|------|
 | 收益 | Revenue/DAU, ARPPU |
-| 留存 | D1/D7 留存率 |
+| 留存 | D1/D7 留存率（打赏用户 -10.3pp） |
 | 生态 | Gini 变化, 中小主播覆盖 |
 | 风控 | 退出率, 投诉率 |
 

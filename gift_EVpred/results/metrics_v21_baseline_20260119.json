@@ -1,0 +1,50 @@
+{
+  "config": {
+    "model": "Ridge",
+    "alpha": 1.0,
+    "metrics_version": "2.1"
+  },
+  "core_metrics": {
+    "revcap_1pct": 0.5136317292180457,
+    "cv": 0.09381225486442663
+  },
+  "v21_decision_metrics": {
+    "misallocation_cost": {
+      "k": 0.01,
+      "n_selected": 14095,
+      "achieved_revenue": 903263.0,
+      "oracle_revenue": 1751015.0,
+      "opportunity_cost": 847752.0,
+      "opportunity_cost_pct": 0.4841489079191212,
+      "wasted_exposure_rate": 0.9076268180205747,
+      "wasted_exposure_value": 8875148.66282642,
+      "efficiency": 0.5158510920808788
+    },
+    "capture_auc": {
+      "capture_auc": 0.060414443235767924,
+      "oracle_auc": 0.09875880809584546,
+      "normalized_auc": 0.6117372657751771,
+      "max_k": 0.1,
+      "n_points": 100
+    },
+    "drift": {
+      "psi": 0.15525086595570384,
+      "kl_divergence": 0.08269111082633236,
+      "wasserstein": 0.06127816441481254,
+      "max_bin_diff": 0.11817358555309125,
+      "interpretation": "\u8f7b\u5fae\u6f02\u79fb\uff0c\u9700\u5173\u6ce8 (0.1 \u2264 PSI < 0.25)",
+      "n_bins": 10
+    },
+    "diversity": {
+      "entropy": 5.197175432309086,
+      "effective_number": 180.76094858867242,
+      "coverage": 0.0033374462324130723,
+      "n_covered_groups": 779,
+      "n_total_groups": 233412,
+      "hhi": 0.01312686456385825,
+      "top10_share": 0.6733288089958297,
+      "gini": 0.7983277265915201,
+      "k": 0.01
+    }
+  }
+}

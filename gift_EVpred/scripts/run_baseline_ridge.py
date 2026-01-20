@@ -146,8 +146,21 @@ def train_model(X_train, y_train):
 
 def evaluate_all_sets(model, X_train, y_train, X_val, y_val, X_test, y_test,
                       train_df, val_df, test_df):
-    """在所有数据集上评估"""
+    """在所有数据集上评估（使用完整 v2.1 指标）"""
     results = {}
+
+    # 切片和生态配置（正确列名）
+    slice_config = {
+        'pair_hist_col': 'pair_gift_cnt_hist',
+        'streamer_hist_col': 'str_gift_cnt_hist',
+        'user_value_col': 'user_gift_sum_hist',
+        'streamer_value_col': 'str_gift_sum_hist',
+    }
+    ecosystem_config = {
+        'streamer_hist_col': 'str_gift_cnt_hist',
+        'streamer_value_col': 'str_gift_sum_hist',
+        'user_value_col': 'user_gift_sum_hist',
+    }
 
     # Train set
     log("Evaluating on train set...")
@@ -179,8 +192,8 @@ def evaluate_all_sets(model, X_train, y_train, X_val, y_val, X_test, y_test,
     results['val'] = val_result
     log(f"  Val RevCap@1%: {val_result.revcap_1pct:.1%}")
 
-    # Test set
-    log("Evaluating on test set...")
+    # Test set（完整 v2.1 指标）
+    log("Evaluating on test set (full v2.1 metrics)...")
     test_pred = model.predict(X_test)
     test_result = evaluate_model(
         y_true=y_test,
@@ -189,7 +202,14 @@ def evaluate_all_sets(model, X_train, y_train, X_val, y_val, X_test, y_test,
         whale_threshold=CONFIG['whale_threshold'],
         compute_stability=True,
         compute_ndcg=True,
-        timestamp_col='timestamp'
+        timestamp_col='timestamp',
+        # v2.1 完整指标
+        y_pred_train=train_pred,          # 用于 PSI/Drift
+        compute_slices=True,              # L5 切片
+        compute_ecosystem=True,           # L6 生态
+        compute_decision_metrics=True,    # L7 决策核心
+        slice_config=slice_config,
+        ecosystem_config=ecosystem_config,
     )
     results['test'] = test_result
     log(f"  Test RevCap@1%: {test_result.revcap_1pct:.1%}")

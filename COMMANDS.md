@@ -26,6 +26,7 @@
 | `a` | 归档实验结果 | `experiments/[topic]/exp_*.md` |
 | `u [exp_id]` | 完整更新实验 | `experiments/[topic]/` |
 | `p` | 生成 Coding Prompt | `experiments/[topic]/prompts/` |
+| `slide` | 生成演示 Slides + 逐字稿 | `experiments/[topic]/slides_*.md` |
 | `merge` | 合并相似实验 | `experiments/[topic]/exp_*_consolidated_*.md` |
 | `card` | 创建知识卡片 | `experiments/[topic]/card/` |
 | `design` | 提取设计原则 | `design/principles.md` |
@@ -129,6 +130,93 @@ AI: 📝 生成 Coding Prompt...
 **⚠️ 强制规则**:
 - ❌ **禁止在 Prompt 中写任何代码**
 - ✅ **只写参考代码路径**
+
+---
+
+### 🎬 生成演示 Slides
+```
+触发词: slide | slides | 演示 | 汇报
+变体: 
+  - slide [exp_id]           # 单个实验生成
+  - slide [exp_id] 中文       # 指定语言（默认英文）
+  - slide [topic]            # 批量：为 topic 下所有实验生成
+  - slide [topic] 中文        # 批量 + 中文
+```
+
+**作用**: 将实验报告压缩成 5 分钟可口头汇报的 slides + 逐字演讲稿
+
+**模板文件**: 
+- 输出模板: `_backend/template/slide.md`
+- 生成指令: `_backend/template/prompt/prompt_slides.md`
+
+**语言选项**:
+- 默认：英文
+- `中文` / `cn` / `chinese`：中文输出
+- `英文` / `en` / `english`：英文输出
+
+**示例 1 - 单个实验**:
+```
+用户: slide baseline_ridge 中文
+
+AI: 🎬 生成演示 Slides（中文）...
+    
+    📖 读取实验报告: exp_baseline_ridge_20260119.md
+    
+    📝 提取关键信息:
+    - one-liner: Ridge回归在benchmark模式下MAE 0.45，优于strict模式
+    - 关键数字: MAE 0.45, R² 0.82, 训练时间 2.3s
+    - decision: 采用benchmark模式作为生产配置
+    
+    ✅ 已生成: gift_EVpred/slides_baseline_ridge_20260119.md
+```
+
+**示例 2 - 批量生成（整个 topic）**:
+```
+用户: slide gift_EVpred
+
+AI: 🎬 批量生成演示 Slides...
+    
+    📁 扫描 gift_EVpred/exp/ 目录
+    📋 找到 5 个实验报告
+    
+    🔄 正在生成:
+    ✅ [1/5] slides_baseline_ridge_20260119.md
+    ✅ [2/5] slides_lightgbm_raw_y_20260118.md
+    ✅ [3/5] slides_metrics_20260119.md
+    ...
+    
+    📂 输出目录: gift_EVpred/slides/
+    ✅ 完成！共生成 5 个 slides
+```
+
+**输出格式**:
+```markdown
+# Slide 1: Problem + Method
+- [3-6 bullet points，带数字]
+
+<details>
+<summary><b>Speaker notes (script)</b></summary>
+
+[逐字演讲稿，约 45-90 秒]
+
+</details>
+
+---
+
+# Slide 2: Results
+...
+
+---
+
+# Slide 3: Decision + Next Steps
+...
+```
+
+**⚠️ 规则**:
+- 总页数 ≤ 3
+- 每页 bullet points 只写"结论性信息"（带数字/对比）
+- 不编造数字，缺失写 `TBD`
+- 逐字稿口语化，三页总计 3-5 分钟
 
 ---
 
@@ -420,6 +508,8 @@ alias exp-archive='echo "使用 a 命令归档实验"'
 | exp 模板 | `_backend/template/exp.md` |
 | hub 模板 | `_backend/template/hub.md` |
 | 知识卡片模板 | `_backend/template/card.md` |
+| slides 输出模板 | `_backend/template/slide.md` |
+| slides 生成指令 | `_backend/template/prompt/prompt_slides.md` |
 | 设计原则汇总 | `design/principles.md` |
 
 ---

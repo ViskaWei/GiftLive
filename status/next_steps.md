@@ -51,6 +51,10 @@
 - ⏳ MVP-5.3 鲸鱼分散 (b-matching)
 - ⏳ MVP-5.4 风险控制 (UCB/CVaR)
 
+**可选 P2（如需精确模拟）**：
+- ⏳ MVP-4.3 Simulator V3：时序冲动模型 + 用户忠诚度 + Gini 校准
+  - 差距分析：[exp_simulator_v2 §5.4](../gift_allocation/exp/exp_simulator_v2_20260109.md)
+
 ---
 
 ## ✅ 已完成

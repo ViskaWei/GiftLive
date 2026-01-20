@@ -1,0 +1,125 @@
+{
+  "config": {
+    "experiment_id": "EXP-20260119-EVpred-02",
+    "baseline_features": 20,
+    "new_features": [
+      "pair_watch_mean_hist",
+      "user_watch_mean_hist",
+      "str_watch_mean_hist"
+    ],
+    "total_features": 23
+  },
+  "results": {
+    "baseline": {
+      "val_revcap": 0.44533043770955855,
+      "test_revcap": 0.5136317292180457,
+      "revcap_curve": {
+        "0.1%": 0.21178495616636367,
+        "0.5%": 0.4334921166554171,
+        "1%": 0.5136317292180457,
+        "2%": 0.5633371451187065,
+        "5%": 0.6362891444863785,
+        "10%": 0.6862413502704737
+      }
+    },
+    "with_watch": {
+      "val_revcap": 0.4453741445242456,
+      "test_revcap": 0.5136573180308441,
+      "revcap_curve": {
+        "0.1%": 0.21178495616636367,
+        "0.5%": 0.4334921166554171,
+        "1%": 0.5136573180308441,
+        "2%": 0.562940802840472,
+        "5%": 0.6394388430217317,
+        "10%": 0.6901109474058914
+      }
+    }
+  },
+  "delta": {
+    "val": 4.370681468707227e-05,
+    "test": 2.558881279846048e-05,
+    "test_pct": 0.004981937708057281
+  },
+  "feature_importance": {
+    "top_15": [
+      {
+        "feature": "pair_gift_mean_hist",
+        "coefficient": 8.180265907768327
+      },
+      {
+        "feature": "pair_gift_sum_hist",
+        "coefficient": 4.915158923931296
+      },
+      {
+        "feature": "user_gift_sum_hist",
+        "coefficient": 4.386078619244396
+      },
+      {
+        "feature": "user_gift_mean_hist",
+        "coefficient": 2.5375022696874074
+      },
+      {
+        "feature": "age",
+        "coefficient": 0.46496369291512407
+      },
+      {
+        "feature": "str_gift_mean_hist",
+        "coefficient": 0.3484032329593952
+      },
+      {
+        "feature": "str_gift_sum_hist",
+        "coefficient": 0.24545501436371187
+      },
+      {
+        "feature": "pair_gift_cnt_hist",
+        "coefficient": 0.21852847937979428
+      },
+      {
+        "feature": "user_gift_cnt_hist",
+        "coefficient": 0.19995101319903452
+      },
+      {
+        "feature": "user_watch_mean_hist",
+        "coefficient": 0.1702597925006854
+      },
+      {
+        "feature": "gender",
+        "coefficient": 0.14540299606191662
+      },
+      {
+        "feature": "live_content_category",
+        "coefficient": 0.14255148420175529
+      },
+      {
+        "feature": "str_gift_cnt_hist",
+        "coefficient": 0.1341618885636291
+      },
+      {
+        "feature": "day_of_week",
+        "coefficient": 0.13306373587433623
+      },
+      {
+        "feature": "device_price",
+        "coefficient": 0.1262600214551059
+      }
+    ],
+    "new_features_rank": [
+      [
+        "user_watch_mean_hist",
+        10,
+        0.1702597925006854
+      ],
+      [
+        "pair_watch_mean_hist",
+        16,
+        0.10310524040175428
+      ],
+      [
+        "str_watch_mean_hist",
+        18,
+        0.09054027724998515
+      ]
+    ]
+  },
+  "conclusion": "no_change"
+}

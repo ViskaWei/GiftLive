@@ -1,0 +1,40 @@
+{
+  "config": {
+    "retention_target": "return_1d",
+    "features": [
+      "pair_gift_cnt_hist",
+      "pair_gift_sum_hist",
+      "pair_gift_mean_hist",
+      "user_gift_cnt_hist",
+      "user_gift_sum_hist",
+      "user_gift_mean_hist",
+      "str_gift_cnt_hist",
+      "str_gift_sum_hist",
+      "str_gift_mean_hist",
+      "is_live_streamer",
+      "is_photo_author",
+      "live_type",
+      "hour",
+      "day_of_week",
+      "is_weekend"
+    ],
+    "n_features": 15
+  },
+  "retention": {
+    "train_auc": 0.5725121626792378,
+    "val_auc": 0.5700154593670411,
+    "test_auc": 0.5721863828178775,
+    "train_retention_rate": 0.9136236011083733,
+    "test_retention_rate": 0.8901309866459317
+  },
+  "revenue": {
+    "revcap_1pct": 0.5136317292180457
+  },
+  "analysis": {
+    "top_1pct_rev_retention": 0.9353007945516458,
+    "bottom_99pct_retention": 0.8896747040532822,
+    "gift_users_retention": 0.7891602419094225,
+    "non_gift_users_retention": 0.8917068721034793,
+    "pred_correlation": 0.03372301884036108
+  }
+}
