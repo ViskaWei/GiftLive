@@ -67,7 +67,8 @@ Gate：把分配问题当成"带约束、带外部性、带风险"的在线资�
 | MVP | MVP-5.3 |
 | 若PASS | 超载率<10% & Gini↓ → 鲸鱼单独匹配层 |
 | 若FAIL | 无改善 → 统一分配 |
-| 状态 | ⏳ 待验证 |
+| 状态 | ❌ **FAIL** |
+| 结论 | Gini=0.912无改善，k=1~5结果相同。超载率0.0%达标但Gini无下降。保留统一分配，需扩大鲸鱼阈值(Top5%)+降低容量重试 |
 
 ### Gate-5D: 风险控制
 
@@ -85,7 +86,8 @@ Gate：把分配问题当成"带约束、带外部性、带风险"的在线资�
 |--------|-----|------|------|
 | 🔴 P0 | MVP-5.1 召回-精排分工 | Gate-5A | ❌ FAIL (Top-1%=54.3%<56%) |
 | 🔴 P0 | MVP-5.2 影子价格 | Gate-5B | ❌ FAIL (收益+2.74%<5%) |
-| 🟡 P1 | MVP-5.3 鲸鱼分散 | Gate-5C | 🔴 就绪 |
+| 🔴 P0 | MVP-5.3 鲸鱼分散 | Gate-5C | ❌ FAIL (Gini=0.912无改善) |
+| 🟡 P1 | MVP-5.4 风险控制 | Gate-5D | ⏳ 就绪 |
 
 ---
 
@@ -99,7 +101,7 @@ Gate：把分配问题当成"带约束、带外部性、带风险"的在线资�
 | 4.3 | Simulator V3（可选：时序+忠诚度） | 4 | - | ⏳ P2 | - | 见 [exp_simulator_v2](exp/exp_simulator_v2_20260109.md) §5.4 |
 | 5.1 | 召回-精排分工 | 5 | Gate-5A | ❌ FAIL | EXP-20260109-gift-allocation-51 | [exp_recall_rerank_20260109.md](exp/exp_recall_rerank_20260109.md) |
 | 5.2 | 影子价格/供需匹配 | 5 | Gate-5B | ❌ FAIL | EXP-20260109-gift-allocation-16 | [exp_shadow_price_20260109.md](exp/exp_shadow_price_20260109.md) |
-| 5.3 | 鲸鱼分散 (b-matching) | 5 | Gate-5C | ⏳ | EXP-20260109-gift-allocation-53 | [exp_whale_matching_20260109.md](exp/exp_whale_matching_20260109.md) |
+| 5.3 | 鲸鱼分散 (b-matching) | 5 | Gate-5C | ❌ FAIL | EXP-20260109-gift-allocation-53 | [exp_whale_matching_20260109.md](exp/exp_whale_matching_20260109.md) |
 | 5.4 | 风险控制 (UCB/CVaR) | 5 | Gate-5D | ⏳ | - | - |
 | 5.5 | 多目标生态调度 | 5 | - | ⏳ | - | - |
 
@@ -362,9 +364,9 @@ Gate：把分配问题当成"带约束、带外部性、带风险"的在线资�
 
 ```
 ⏳计划    🔴就绪    🚀运行    ❌失败      ✅完成
-MVP-5.3                       MVP-5.1     MVP-4.1+
-MVP-5.4                       MVP-5.2     MVP-4.2
-MVP-5.5                                   (Phase 0-3)
+MVP-5.4                       MVP-5.1     MVP-4.1+
+MVP-5.5                       MVP-5.2     MVP-4.2
+                              MVP-5.3     (Phase 0-3)
 ```
 
 ## 6.2 Gate进度
@@ -373,7 +375,7 @@ MVP-5.5                                   (Phase 0-3)
 |------|-----|------|------|
 | Gate-5A 召回精排 | MVP-5.1 | ❌ FAIL | Recall Coverage仅5.5%，保留Direct-only |
 | Gate-5B 影子价格 | MVP-5.2 | ❌ FAIL | 收益+2.74%<5%, 容量82.8%<90%, 保留Greedy+Rules |
-| Gate-5C 鲸鱼分散 | MVP-5.3 | ⏳ | - |
+| Gate-5C 鲸鱼分散 | MVP-5.3 | ❌ FAIL | Gini=0.912无改善，k=1~5相同，保留统一分配 |
 | Gate-5D 风险控制 | MVP-5.4 | ⏳ | - |
 
 ## 6.3 结论快照
@@ -384,6 +386,7 @@ MVP-5.5                                   (Phase 0-3)
 | 4.2 | 并发容量建模有效 | 边际递减24.4% | ✅ K10 |
 | 5.1 | ❌ 召回-精排架构失败 | Recall Coverage仅5.5%@Top-1000 | ✅ DG6关闭 |
 | 5.2 | ❌ 影子价格框架失败 | 收益+2.74%<5%，容量82.8%<90% | ✅ DG7关闭，I27/I28添加 |
+| 5.3 | ❌ 分层匹配策略失败 | Gini=0.912无改善，k=1~5结果相同，超载率0% | ✅ K7添加，I12/I13添加 |
 
 ## 6.4 时间线
 
@@ -393,6 +396,7 @@ MVP-5.5                                   (Phase 0-3)
 | 2026-01-09 | 战略转向：从预测优化转向分配优化 |
 | 2026-01-09 | MVP-5.1 召回-精排分工 ❌ FAIL，Gate-5A 关闭 |
 | 2026-01-09 | MVP-5.2 影子价格 ❌ FAIL，Gate-5B 关闭，保留Greedy+Rules |
+| 2026-01-20 | MVP-5.3 鲸鱼分散 ❌ FAIL，Gate-5C 关闭，Gini无改善 |
 
 ---
 
