@@ -32,7 +32,8 @@
 | 📄 **Data Utils** | `data_utils.py` (Final v1.0 - Last-Touch) |
 | 📊 **Final Result** | `results/metrics_v21_baseline_20260119.json` |
 | 📗 Baseline Report | `exp/exp_baseline_ridge_20260119.md` |
-| 📘 Metrics 手册 | `exp/exp_metrics_20260119.md` |
+| 📘 Metrics 手册 | `exp/exp_metrics_20260119.md` (v2.2) |
+| 🎬 **Slides** | `slide/slides_baseline_ridge_20260119.md`, `slide/slides_metrics_v22_20260119.md` |
 | 🗃️ Archive (Leaky) | `exp/archive_leaky/` |
 | 🗃️ Archive (Last-Touch 前) | `exp/archive_last_touch/` |
 
@@ -94,7 +95,8 @@
 | MVP | 名称 | 状态 | 结果 | 报告 |
 |-----|------|------|------|------|
 | **3.2** | **Final Baseline (Last-Touch)** | **✅** | **51.4%** | [Link](./exp/exp_baseline_ridge_20260119.md) |
-| **3.5** | **Metrics v2.1 指标体系** | **✅** | - | [Link](./exp/exp_metrics_20260119.md) |
+| **3.5** | **Metrics v2.2 指标体系** | **✅** | 7 层 38 指标 | [Link](./exp/exp_metrics_20260119.md) |
+| **3.6** | **Baseline v2.2 评估** | **✅** | WRecLift=34.6× | [Slide](./slide/slides_baseline_ridge_20260119.md) |
 | 4.1 | **重跑 Two-Stage** | 🔄 | 待做 | - |
 | 4.2 | **重跑 LightGBM** | 🔄 | 待做 | - |
 | 5.0 | 分配 MVP | ⏳ | - | - |
@@ -308,6 +310,8 @@ $$R(a) = w_{rev} \cdot r^{rev}(a) + w_{usr} \cdot r^{usr}(a) + w_{eco} \cdot r^{
 | **3.2** | **Final Baseline v1.0** | **RevCap=51.4%, CV=9.4%** | ✅ |
 | **3.3** | 历史观看先验 | RevCap > 54% | ⏳ |
 | **3.4** | 样本加权回归 | RevCap > 55% | ⏳ |
+| **3.5** | **Metrics v2.2 指标体系** | **7 层 38 指标** | ✅ |
+| **3.6** | **Baseline v2.2 评估** | **WRecLift=34.6×, PSI=0.155** | ✅ |
 | **4.0** | 预测目标扩展 | 留存 AUC=0.57, Gini=0.926 | ⚠️ 部分成功 |
 
 ## 4.2 时间线
@@ -372,3 +376,6 @@ $$R(a) = w_{rev} \cdot r^{rev}(a) + w_{usr} \cdot r^{usr}(a) + w_{eco} \cdot r^{
 | 2026-01-19 | **清理归档**：旧实验移至 archive_last_touch/，保留 Last-Touch 数据的实验 |
 | 2026-01-19 | **Metrics v2.1 手册**：完整指标体系文档（7 层指标，输入输出、公式、含义） |
 | 2026-01-19 | **待重跑**：Two-Stage 和 LightGBM 需用 Last-Touch 数据重新验证 |
+| 2026-01-20 | **Metrics v2.2 更新**：口径修订（Regret 命名、金额/比例双版本、nAUC 规范） |
+| 2026-01-20 | **Baseline v2.2 评估**：WRecLift=34.6×（Sample）、WhaleUserPrec=72.6%（User）、PSI=0.155 |
+| 2026-01-20 | **Slides 生成**：slides_baseline_ridge_20260119.md + slides_metrics_v22_20260119.md |
