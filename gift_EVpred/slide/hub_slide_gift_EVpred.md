@@ -275,7 +275,8 @@ $$r^{eco}_t = -\lambda \cdot \text{concentration}(\text{exposure/revenue})$$
 
 ---
 
-## 备忘：8分钟口播节奏建议
+<details>
+<summary><b>备忘：8分钟口播节奏建议</b></summary>
 
 | 页数 | 时长 | 内容 |
 |------|------|------|
@@ -285,3 +286,5 @@ $$r^{eco}_t = -\lambda \cdot \text{concentration}(\text{exposure/revenue})$$
 | 4 | 55s | 指标体系 + 评估结果 |
 | 5 | 55s | 核心共识 + 局限 |
 | 6 | 55s | 下一步 → 分配层 |
+
+</details>
