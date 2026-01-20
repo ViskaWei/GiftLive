@@ -1,4 +1,4 @@
-# [实验名称] — 5min 汇报（可直接拿去讲）
+# [实验名称] — 5min 汇报
 
 > **Experiment**: [EXP-YYYYMMDD-topic-XX]  \
 > **Author**: [作者]  \
